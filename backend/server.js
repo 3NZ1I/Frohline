@@ -125,6 +125,25 @@ const seedData = () => {
 
 seedData();
 
+// Add sub_brand_id column to orders table if it doesn't exist
+const addSubBrandColumn = () => {
+  try {
+    const tableInfo = db.prepare("PRAGMA table_info(orders)").all();
+    const hasSubBrand = tableInfo.some(col => col.name === 'sub_brand_id');
+    
+    if (!hasSubBrand) {
+      db.exec('ALTER TABLE orders ADD COLUMN sub_brand_id TEXT');
+      console.log('Added sub_brand_id column to orders table');
+    } else {
+      console.log('sub_brand_id column already exists');
+    }
+  } catch (error) {
+    console.error('Error adding sub_brand_id column:', error.message);
+  }
+};
+
+addSubBrandColumn();
+
 // Run product translations migration
 const runTranslationsMigration = () => {
   try {
