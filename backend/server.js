@@ -303,7 +303,8 @@ app.delete('/api/products/:id', (req, res) => {
 app.get('/api/orders', (req, res) => {
   const { status } = req.query;
   let query = `
-    SELECT o.*, c.name as customer_name, c.company as customer_company
+    SELECT o.id, o.customer_id, o.sub_brand_id, o.status, o.total_amount, o.notes, o.created_at, o.updated_at,
+           c.name as customer_name, c.company as customer_company
     FROM orders o
     JOIN customers c ON o.customer_id = c.id
   `;
