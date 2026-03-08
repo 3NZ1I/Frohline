@@ -135,15 +135,21 @@ function OrderForm() {
     e.preventDefault();
     setLoading(true);
 
+    console.log('Submitting order with sub_brand_id:', formData.sub_brand_id);
+    console.log('Full form data:', formData);
+
     try {
       if (isEdit) {
+        console.log('Updating order:', id);
         await ordersApi.update(id, formData);
       } else {
+        console.log('Creating new order');
         await ordersApi.create(formData);
       }
       navigate('/');
     } catch (error) {
       console.error('Error saving order:', error);
+      console.error('Error response:', error.response?.data);
       alert('Error saving order. Please try again.');
     }
     setLoading(false);

@@ -26,10 +26,28 @@ export const productsApi = {
 };
 
 export const ordersApi = {
-  getAll: (status) => api.get('/orders', status ? { params: { status } } : {}),
-  getById: (id) => api.get(`/orders/${id}`),
-  create: (data) => api.post('/orders', data),
-  update: (id, data) => api.put(`/orders/${id}`, data),
+  getAll: (status) => {
+    const result = api.get('/orders', status ? { params: { status } } : {});
+    console.log('API getAll orders result:', result);
+    return result;
+  },
+  getById: (id) => {
+    const result = api.get(`/orders/${id}`);
+    console.log('API getById order:', result);
+    return result;
+  },
+  create: (data) => {
+    console.log('API create order with data:', data);
+    const result = api.post('/orders', data);
+    console.log('API create order response:', result);
+    return result;
+  },
+  update: (id, data) => {
+    console.log('API update order', id, 'with data:', data);
+    const result = api.put(`/orders/${id}`, data);
+    console.log('API update order response:', result);
+    return result;
+  },
   updateStatus: (id, status) => api.patch(`/orders/${id}/status`, { status }),
   delete: (id) => api.delete(`/orders/${id}`),
 };
