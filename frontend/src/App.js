@@ -19,11 +19,18 @@ function Sidebar() {
       }}
     >
       {/* Logo/Brand */}
-      <div className="p-4 border-bottom border-secondary">
-        <h4 className="text-white mb-0 fw-bold">
-          📦 Frohline <span className="text-info">OMS</span>
-        </h4>
-        <small className="text-white-50">Order Management</small>
+      <div className="p-4 border-bottom border-secondary text-center">
+        <img
+          src="/company-logo.png"
+          alt="Frohline"
+          style={{
+            maxHeight: '60px',
+            maxWidth: '200px',
+            objectFit: 'contain',
+            marginBottom: '8px',
+          }}
+        />
+        <small className="text-white-50 d-block">Order Management System</small>
       </div>
 
       {/* Navigation */}
@@ -82,8 +89,8 @@ function Sidebar() {
           <button
             type="button"
             className={`btn btn-sm py-2 ${
-              language === 'tr' 
-                ? 'btn-primary fw-semibold' 
+              language === 'tr'
+                ? 'btn-danger fw-semibold'  /* Red instead of blue */
                 : 'btn-outline-light'
             }`}
             onClick={() => setLanguage('tr')}
@@ -94,8 +101,8 @@ function Sidebar() {
           <button
             type="button"
             className={`btn btn-sm py-2 ${
-              language === 'en' 
-                ? 'btn-primary fw-semibold' 
+              language === 'en'
+                ? 'btn-danger fw-semibold'  /* Red */
                 : 'btn-outline-light'
             }`}
             onClick={() => setLanguage('en')}
@@ -106,8 +113,8 @@ function Sidebar() {
           <button
             type="button"
             className={`btn btn-sm py-2 ${
-              language === 'ar' 
-                ? 'btn-primary fw-semibold' 
+              language === 'ar'
+                ? 'btn-danger fw-semibold'  /* Red */
                 : 'btn-outline-light'
             }`}
             onClick={() => setLanguage('ar')}
@@ -116,7 +123,7 @@ function Sidebar() {
             🇸🇦 AR
           </button>
         </div>
-        
+
         {/* Current language indicator */}
         <div className="mt-3 text-center">
           <small className="text-white-50">
