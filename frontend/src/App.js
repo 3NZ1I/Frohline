@@ -19,7 +19,7 @@ function Sidebar() {
       }}
     >
       {/* Logo/Brand */}
-      <div className="p-4 border-bottom border-secondary text-center">
+      <div className="p-4 border-bottom border-secondary d-flex flex-column justify-content-center align-items-center">
         <img
           src="/company-logo.png"
           alt="Frohline"
@@ -30,48 +30,48 @@ function Sidebar() {
             marginBottom: '8px',
           }}
         />
-        <small className="text-white-50 d-block">Order Management System</small>
+        <small className="text-white-50">Order Management System</small>
       </div>
 
       {/* Navigation */}
       <nav className="nav flex-column p-3 flex-grow-1">
-        <Link 
+        <Link
           className={`nav-link rounded mb-2 d-flex align-items-center ${
-            location.pathname === '/' ? 'active bg-primary' : 'text-white'
-          }`} 
+            location.pathname === '/' ? 'active bg-danger' : 'text-white'
+          }`}
           to="/"
           style={{ padding: '12px 15px', transition: 'all 0.2s' }}
         >
           <span className="me-2">📋</span>
           <span>{t('orders')}</span>
         </Link>
-        
-        <Link 
+
+        <Link
           className={`nav-link rounded mb-2 d-flex align-items-center ${
-            location.pathname === '/orders/new' ? 'active bg-primary' : 'text-white'
-          }`} 
+            location.pathname === '/orders/new' ? 'active bg-danger' : 'text-white'
+          }`}
           to="/orders/new"
           style={{ padding: '12px 15px', transition: 'all 0.2s' }}
         >
           <span className="me-2">➕</span>
           <span>{t('newOrder')}</span>
         </Link>
-        
-        <Link 
+
+        <Link
           className={`nav-link rounded mb-2 d-flex align-items-center ${
-            location.pathname === '/customers' ? 'active bg-primary' : 'text-white'
-          }`} 
+            location.pathname === '/customers' ? 'active bg-danger' : 'text-white'
+          }`}
           to="/customers"
           style={{ padding: '12px 15px', transition: 'all 0.2s' }}
         >
           <span className="me-2">👥</span>
           <span>{t('customers')}</span>
         </Link>
-        
-        <Link 
+
+        <Link
           className={`nav-link rounded mb-2 d-flex align-items-center ${
-            location.pathname === '/products' ? 'active bg-primary' : 'text-white'
-          }`} 
+            location.pathname === '/products' ? 'active bg-danger' : 'text-white'
+          }`}
           to="/products"
           style={{ padding: '12px 15px', transition: 'all 0.2s' }}
         >
