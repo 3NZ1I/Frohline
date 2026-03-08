@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const LanguageContext = createContext();
 
@@ -183,7 +183,20 @@ const translations = {
 };
 
 export function LanguageProvider({ children }) {
-  const [language, setLanguage] = useState('tr');
+  const [language, setLanguageState] = useState(() => {
+    // Load from localStorage on initial render
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('frohline_language');
+      return saved || 'tr'; // Default to Turkish
+    }
+    return 'tr';
+  });
+
+  const setLanguage = (newLang) => {
+    setLanguageState(newLang);
+    // Save to localStorage
+    localStorage.setItem('frohline_language', newLang);
+  };
 
   const t = (key) => {
     return translations[language]?.[key] || translations.en?.[key] || key;
