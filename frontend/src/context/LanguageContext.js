@@ -5,10 +5,10 @@ const LanguageContext = createContext();
 const translations = {
   tr: {
     // Sidebar
-    orders: '📋 Siparişler',
-    newOrder: '➕ Yeni Sipariş',
-    customers: '👥 Müşteriler',
-    products: '📦 Ürünler',
+    orders: 'Siparişler',
+    newOrder: 'Yeni Sipariş',
+    customers: 'Müşteriler',
+    products: 'Ürünler',
     // Orders page
     ordersTitle: 'Siparişler',
     newOrderBtn: '➕ Yeni Sipariş',
@@ -64,10 +64,10 @@ const translations = {
   },
   en: {
     // Sidebar
-    orders: '📋 Orders',
-    newOrder: '➕ New Order',
-    customers: '👥 Customers',
-    products: '📦 Products',
+    orders: 'Orders',
+    newOrder: 'New Order',
+    customers: 'Customers',
+    products: 'Products',
     // Orders page
     ordersTitle: 'Orders',
     newOrderBtn: '➕ New Order',
@@ -123,10 +123,10 @@ const translations = {
   },
   ar: {
     // Sidebar
-    orders: '📋 الطلبات',
-    newOrder: '➕ طلب جديد',
-    customers: '👥 العملاء',
-    products: '📦 المنتجات',
+    orders: 'الطلبات',
+    newOrder: 'طلب جديد',
+    customers: 'العملاء',
+    products: 'المنتجات',
     // Orders page
     ordersTitle: 'الطلبات',
     newOrderBtn: '➕ طلب جديد',

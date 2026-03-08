@@ -193,9 +193,48 @@ function OrdersList() {
                         </td>
                         <td>
                           {order.sub_brand_id ? (
-                            <small className="text-muted">
-                              {getSubBrandName(order.sub_brand_id, language)}
-                            </small>
+                            <div className="d-flex align-items-center gap-2">
+                              {(() => {
+                                const brand = subBrands.find(b => b.id === order.sub_brand_id);
+                                if (brand?.logo) {
+                                  return (
+                                    <img
+                                      src={brand.logo}
+                                      alt={getSubBrandName(brand.id, language)}
+                                      style={{
+                                        width: '30px',
+                                        height: '30px',
+                                        objectFit: 'contain',
+                                      }}
+                                      onError={(e) => {
+                                        e.target.style.display = 'none';
+                                        e.target.nextSibling.style.display = 'flex';
+                                      }}
+                                    />
+                                  );
+                                }
+                                return null;
+                              })()}
+                              <div
+                                style={{
+                                  width: '30px',
+                                  height: '30px',
+                                  borderRadius: '6px',
+                                  backgroundColor: subBrands.find(b => b.id === order.sub_brand_id)?.color || '#666',
+                                  color: 'white',
+                                  fontSize: '16px',
+                                  fontWeight: 'bold',
+                                  display: subBrands.find(b => b.id === order.sub_brand_id)?.logo ? 'none' : 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                }}
+                              >
+                                {subBrands.find(b => b.id === order.sub_brand_id)?.name.tr.charAt(0)}
+                              </div>
+                              <small className="text-muted">
+                                {getSubBrandName(order.sub_brand_id, language)}
+                              </small>
+                            </div>
                           ) : (
                             <span className="text-muted">-</span>
                           )}
