@@ -312,10 +312,12 @@ app.get('/api/orders', (req, res) => {
     query += ' WHERE o.status = ?';
     query += ' ORDER BY o.created_at DESC';
     const orders = db.prepare(query).all(status);
+    console.log('Orders with status filter:', orders);
     return res.json(orders);
   }
   query += ' ORDER BY o.created_at DESC';
   const orders = db.prepare(query).all();
+  console.log('All orders:', orders);
   res.json(orders);
 });
 

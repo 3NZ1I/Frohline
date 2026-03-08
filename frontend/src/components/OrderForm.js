@@ -440,9 +440,26 @@ function OrderForm() {
           </div>
         </div>
 
-        <div className="mt-4">
+        <div className="mt-4 d-flex gap-2">
           <button type="submit" className="btn btn-primary btn-lg" disabled={loading || formData.items.length === 0}>
-            {loading ? 'Saving...' : isEdit ? 'Update Order' : t('createOrder')}
+            {loading ? 'Saving...' : isEdit ? '💾 Save Changes' : t('createOrder')}
+          </button>
+          {isEdit && (
+            <button
+              type="button"
+              className="btn btn-success btn-lg"
+              onClick={() => {
+                const customer = customers.find(c => c.id === formData.customer_id);
+                const brandName = formData.sub_brand_id ? getSubBrandName(formData.sub_brand_id, language) : 'N/A';
+                exportOrderToXLSX(formData, formData.items, customer, brandName, language, true);
+              }}
+              disabled={formData.items.length === 0}
+            >
+              📊 Save & Export
+            </button>
+          )}
+          <button type="button" className="btn btn-secondary btn-lg" onClick={() => navigate('/')}>
+            Cancel
           </button>
         </div>
       </form>
