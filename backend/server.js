@@ -450,14 +450,14 @@ app.get('/api/orders/:id', (req, res) => {
     WHERE o.id = ?
   `).get(req.params.id);
   if (!order) return res.status(404).json({ error: 'Order not found' });
-  
+
   const items = db.prepare(`
-    SELECT oi.*, p.name as product_name, p.sku as product_sku
+    SELECT oi.*, p.name as product_name, p.sku as product_sku, p.weight as product_weight
     FROM order_items oi
     JOIN products p ON oi.product_id = p.id
     WHERE oi.order_id = ?
   `).all(req.params.id);
-  
+
   res.json({ ...order, items });
 });
 
