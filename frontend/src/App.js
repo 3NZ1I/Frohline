@@ -154,12 +154,12 @@ function App() {
         </div>
         
         {/* Main Content */}
-        <div 
+        <div
           style={{
             [language === 'ar' ? 'marginRight' : 'marginLeft']: '250px',
             [language === 'ar' ? 'marginLeft' : 'marginRight']: 0,
             direction: language === 'ar' ? 'rtl' : 'ltr',
-            minHeight: '100vh',
+            padding: '20px',
           }}
         >
           <Routes>

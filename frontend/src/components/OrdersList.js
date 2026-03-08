@@ -63,6 +63,7 @@ function OrdersList() {
     setLoading(true);
     try {
       const response = await ordersApi.getAll(filter !== 'all' ? filter : null);
+      console.log('Loaded orders:', response.data);
       setOrders(response.data);
     } catch (error) {
       console.error('Error loading orders:', error);
