@@ -1,10 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { productsApi } from '../api';
+import * as XLSX from 'xlsx';
 
 function Products() {
   const [products, setProducts] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [selectedProducts, setSelectedProducts] = useState(new Set());
+  const [selectAll, setSelectAll] = useState(false);
+  const fileInputRef = useRef(null);
+
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -82,6 +87,132 @@ function Products() {
     }
   };
 
+  // Multi-select handlers
+  const toggleSelectProduct = (id) => {
+    const newSelected = new Set(selectedProducts);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedProducts(newSelected);
+    setSelectAll(newSelected.size === products.length);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectAll) {
+      setSelectedProducts(new Set());
+      setSelectAll(false);
+    } else {
+      setSelectedProducts(new Set(products.map(p => p.id)));
+      setSelectAll(true);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedProducts.size === 0) return;
+    
+    if (!window.confirm(`Are you sure you want to delete ${selectedProducts.size} products?`)) {
+      return;
+    }
+
+    try {
+      await productsApi.bulkDelete(Array.from(selectedProducts));
+      setSelectedProducts(new Set());
+      setSelectAll(false);
+      loadProducts();
+    } catch (error) {
+      console.error('Error deleting products:', error);
+      alert('Error deleting products');
+    }
+  };
+
+  // Export to XLSX
+  const handleExport = async () => {
+    try {
+      const response = await productsApi.export();
+      const blob = new Blob([response.data], { 
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `products-${new Date().toISOString().split('T')[0]}.xlsx`;
+      link.click();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Export error:', error);
+      alert('Error exporting products');
+    }
+  };
+
+  // Import from XLSX
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data);
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+      if (jsonData.length === 0) {
+        alert('No data found in file');
+        return;
+      }
+
+      if (!window.confirm(`Import ${jsonData.length} products? This will add them to your existing products.`)) {
+        return;
+      }
+
+      const response = await productsApi.import(jsonData);
+      alert(response.data.message);
+      if (response.data.errors) {
+        console.error('Import errors:', response.data.errors);
+        alert(`Imported with ${response.data.errors.length} errors. Check console for details.`);
+      }
+      
+      loadProducts();
+      e.target.value = '';
+    } catch (error) {
+      console.error('Import error:', error);
+      alert('Error importing products: ' + error.message);
+    }
+  };
+
+  const handleExportSelected = async () => {
+    if (selectedProducts.size === 0) {
+      alert('No products selected');
+      return;
+    }
+
+    try {
+      const selectedData = products
+        .filter(p => selectedProducts.has(p.id))
+        .map(p => ({
+          'Name (TR | EN | AR)': p.name,
+          'Description': p.description || '',
+          'SKU': p.sku || '',
+          'Weight (kg)': p.weight || 0,
+          'Price': p.price || 0,
+          'Stock': p.stock || 0,
+        }));
+
+      const worksheet = XLSX.utils.json_to_sheet(selectedData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Selected Products');
+      XLSX.writeFile(workbook, `selected-products-${new Date().toISOString().split('T')[0]}.xlsx`);
+    } catch (error) {
+      console.error('Export error:', error);
+      alert('Error exporting selected products');
+    }
+  };
+
   return (
     <div>
       <div className="d-flex justify-content-between align-items-center mb-4">
@@ -91,12 +222,80 @@ function Products() {
         </button>
       </div>
 
+      {/* Bulk Actions Toolbar */}
+      {selectedProducts.size > 0 && (
+        <div className="card mb-3 bg-light">
+          <div className="card-body py-2">
+            <div className="d-flex justify-content-between align-items-center">
+              <span className="fw-semibold">
+                {selectedProducts.size} product(s) selected
+              </span>
+              <div className="btn-group" role="group">
+                <button 
+                  className="btn btn-sm btn-outline-danger"
+                  onClick={handleBulkDelete}
+                >
+                  🗑️ Delete Selected
+                </button>
+                <button 
+                  className="btn btn-sm btn-outline-success"
+                  onClick={handleExportSelected}
+                >
+                  📊 Export Selected
+                </button>
+                <button 
+                  className="btn btn-sm btn-outline-secondary"
+                  onClick={() => {
+                    setSelectedProducts(new Set());
+                    setSelectAll(false);
+                  }}
+                >
+                  ✕ Clear Selection
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Import/Export Actions */}
+      <div className="card mb-3">
+        <div className="card-body py-2">
+          <div className="d-flex gap-2">
+            <button className="btn btn-sm btn-outline-success" onClick={handleExport}>
+              📥 Export All Products
+            </button>
+            <button className="btn btn-sm btn-outline-primary" onClick={handleImportClick}>
+              📤 Import Products
+            </button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              accept=".xlsx,.xls"
+              style={{ display: 'none' }}
+            />
+            <small className="text-muted align-self-center">
+              Supports XLSX format. Template columns: Name, Description, SKU, Weight, Price, Stock
+            </small>
+          </div>
+        </div>
+      </div>
+
       <div className="card">
         <div className="card-body">
           <div className="table-responsive">
             <table className="table table-hover">
               <thead>
                 <tr>
+                  <th style={{ width: '40px' }}>
+                    <input
+                      type="checkbox"
+                      className="form-check-input"
+                      checked={selectAll}
+                      onChange={toggleSelectAll}
+                    />
+                  </th>
                   <th>Name (TR | EN | AR)</th>
                   <th>SKU</th>
                   <th>Weight (kg)</th>
@@ -108,13 +307,21 @@ function Products() {
               <tbody>
                 {products.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="text-center text-muted py-4">
+                    <td colSpan="7" className="text-center text-muted py-4">
                       No products found
                     </td>
                   </tr>
                 ) : (
                   products.map(product => (
                     <tr key={product.id} style={{ direction: 'ltr' }}>
+                      <td>
+                        <input
+                          type="checkbox"
+                          className="form-check-input"
+                          checked={selectedProducts.has(product.id)}
+                          onChange={() => toggleSelectProduct(product.id)}
+                        />
+                      </td>
                       <td>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                           <strong>{product.name}</strong>

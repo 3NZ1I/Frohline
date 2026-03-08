@@ -23,6 +23,9 @@ export const productsApi = {
   create: (data) => api.post('/products', data),
   update: (id, data) => api.put(`/products/${id}`, data),
   delete: (id) => api.delete(`/products/${id}`),
+  bulkDelete: (ids) => api.post('/products/bulk-delete', { ids }),
+  export: () => api.get('/products/export', { responseType: 'blob' }),
+  import: (products) => api.post('/products/import', { products }),
 };
 
 export const ordersApi = {

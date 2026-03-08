@@ -3,6 +3,8 @@ const cors = require('cors');
 const Database = require('better-sqlite3');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
+const XLSX = require('xlsx');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -14,7 +16,6 @@ app.use(express.json());
 
 // Ensure data directory exists
 const dbDir = path.dirname(DB_PATH);
-const fs = require('fs');
 if (!fs.existsSync(dbDir)) {
   fs.mkdirSync(dbDir, { recursive: true });
 }
@@ -316,6 +317,107 @@ app.put('/api/products/:id', (req, res) => {
 app.delete('/api/products/:id', (req, res) => {
   db.prepare('DELETE FROM products WHERE id = ?').run(req.params.id);
   res.json({ message: 'Product deleted' });
+});
+
+// Bulk product operations
+app.post('/api/products/bulk-delete', (req, res) => {
+  const { ids } = req.body;
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ error: 'No product IDs provided' });
+  }
+  
+  const deleteProduct = db.prepare('DELETE FROM products WHERE id = ?');
+  let deleted = 0;
+  
+  db.transaction(() => {
+    ids.forEach(id => {
+      deleteProduct.run(id);
+      deleted++;
+    });
+  });
+  
+  res.json({ message: `${deleted} products deleted`, deleted });
+});
+
+app.get('/api/products/export', (req, res) => {
+  try {
+    const products = db.prepare('SELECT * FROM products ORDER BY name').all();
+    
+    const data = products.map(p => ({
+      'Name (TR | EN | AR)': p.name,
+      'Description': p.description || '',
+      'SKU': p.sku || '',
+      'Weight (kg)': p.weight || 0,
+      'Price': p.price || 0,
+      'Stock': p.stock || 0,
+    }));
+    
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Products');
+    
+    const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+    
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename="products.xlsx"');
+    res.send(buffer);
+  } catch (error) {
+    console.error('Export error:', error);
+    res.status(500).json({ error: 'Export failed' });
+  }
+});
+
+app.post('/api/products/import', (req, res) => {
+  try {
+    const { products } = req.body;
+    if (!Array.isArray(products) || products.length === 0) {
+      return res.status(400).json({ error: 'No products data provided' });
+    }
+    
+    const insertProduct = db.prepare(`
+      INSERT INTO products (id, name, description, sku, price, stock, weight, name_en, name_ar)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    
+    let imported = 0;
+    let errors = [];
+    
+    db.transaction(() => {
+      products.forEach((p, index) => {
+        try {
+          const id = p['SKU'] ? `import-${p['SKU']}` : `import-${uuidv4()}`;
+          const name = p['Name (TR | EN | AR)'] || p['Name'] || '';
+          const description = p['Description'] || '';
+          const sku = p['SKU'] || '';
+          const price = parseFloat(p['Price']) || 0;
+          const stock = parseInt(p['Stock']) || 0;
+          const weight = parseFloat(p['Weight (kg)']) || 0;
+          
+          // Try to extract English and Arabic names from combined name
+          let nameEn = '', nameAr = '';
+          if (name.includes('|')) {
+            const parts = name.split('|').map(s => s.trim());
+            if (parts.length >= 2) nameEn = parts[1];
+            if (parts.length >= 3) nameAr = parts[2];
+          }
+          
+          insertProduct.run(id, name, description, sku, price, stock, weight, nameEn, nameAr);
+          imported++;
+        } catch (err) {
+          errors.push(`Row ${index + 1}: ${err.message}`);
+        }
+      });
+    });
+    
+    res.json({ 
+      message: `Imported ${imported} products`, 
+      imported,
+      errors: errors.length > 0 ? errors : undefined
+    });
+  } catch (error) {
+    console.error('Import error:', error);
+    res.status(500).json({ error: 'Import failed: ' + error.message });
+  }
 });
 
 // --- Orders ---
