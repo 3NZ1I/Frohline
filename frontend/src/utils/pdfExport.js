@@ -1,12 +1,31 @@
-// Enhanced PDF Export with Turkish font support, sub-brand logo, and proper colors
+// Enhanced PDF Export with sub-brand logo and proper colors
+// Note: Turkish characters are transliterated for PDF compatibility
 import { subBrands } from '../data/subBrands';
+
+// Turkish character mapping for PDF compatibility
+function transliterateTurkish(text) {
+  if (!text) return '';
+  return text
+    .replace(/İ/g, 'I')
+    .replace(/ı/g, 'i')
+    .replace(/Ş/g, 'S')
+    .replace(/ş/g, 's')
+    .replace(/Ğ/g, 'G')
+    .replace(/ğ/g, 'g')
+    .replace(/Ü/g, 'U')
+    .replace(/ü/g, 'u')
+    .replace(/Ö/g, 'O')
+    .replace(/ö/g, 'o')
+    .replace(/Ç/g, 'C')
+    .replace(/ç/g, 'c');
+}
 
 export async function exportOrderAsPDF(order, customer, brandName, includePrices, language) {
   const jsPDF = (await import('jspdf')).default;
   
   const pdfLabels = {
     en: { title: 'Order Form', customer: 'Customer', company: 'Company', brand: 'Brand', date: 'Date', status: 'Status', product: 'Product', sku: 'SKU', qty: 'Qty', weight: 'Weight (m)', price: 'Price', subtotal: 'Subtotal', totalQty: 'Total Qty', totalWeight: 'Total Weight', totalAmount: 'Total Amount', notes: 'Notes', withPrices: 'with_prices', withoutPrices: 'without_prices' },
-    tr: { title: 'Sipariş Formu', customer: 'Müşteri', company: 'Şirket', brand: 'Marka', date: 'Tarih', status: 'Durum', product: 'Ürün', sku: 'SKU', qty: 'Adet', weight: 'Ağırlık (m)', price: 'Fiyat', subtotal: 'Ara Toplam', totalQty: 'Toplam Adet', totalWeight: 'Toplam Ağırlık', totalAmount: 'Toplam Tutar', notes: 'Notlar', withPrices: 'fiyatli', withoutPrices: 'fiyatsiz' },
+    tr: { title: 'Siparis Formu', customer: 'Musteri', company: 'Sirket', brand: 'Marka', date: 'Tarih', status: 'Durum', product: 'Urun', sku: 'SKU', qty: 'Adet', weight: 'Agirlik (m)', price: 'Fiyat', subtotal: 'Ara Toplam', totalQty: 'Toplam Adet', totalWeight: 'Toplam Agirlik', totalAmount: 'Toplam Tutar', notes: 'Notlar', withPrices: 'fiyatli', withoutPrices: 'fiyatsiz' },
     ar: { title: 'نموذج الطلب', customer: 'العميل', company: 'الشركة', brand: 'العلامة التجارية', date: 'التاريخ', status: 'الحالة', product: 'اسم المنتج', sku: 'رمز المنتج', qty: 'الكمية', weight: 'الوزن (م)', price: 'السعر', subtotal: 'المجموع الجزئي', totalQty: 'إجمالي الكمية', totalWeight: 'إجمالي الوزن', totalAmount: 'إجمالي المبلغ', notes: 'ملاحظات', withPrices: 'مع_الأسعار', withoutPrices: 'بدون_أسعار' },
   };
 
@@ -49,9 +68,9 @@ export async function exportOrderAsPDF(order, customer, brandName, includePrices
             logoReader.readAsDataURL(logoBlob);
           });
           
-          // Add logo to top right
-          const logoSize = 12;
-          pdf.addImage(logoDataUrl, 'PNG', pageWidth - margin - logoSize - 10, margin - 5, logoSize, logoSize);
+          // Add logo to top right - adjusted size and position
+          const logoSize = 15;
+          pdf.addImage(logoDataUrl, 'PNG', pageWidth - margin - logoSize - 5, margin - 3, logoSize, logoSize * 0.6);
         }
       } catch (e) {
         console.log('Could not add logo:', e);
@@ -63,16 +82,21 @@ export async function exportOrderAsPDF(order, customer, brandName, includePrices
   pdf.setFontSize(9);
   pdf.setFont('helvetica', 'normal');
   
+  const customerName = transliterateTurkish(customer?.name || '-');
+  const companyName = transliterateTurkish(customer?.company || '');
+  const brandLabel = transliterateTurkish(brandName);
+  const notesText = transliterateTurkish(order.notes || '');
+  
   pdf.setFont('helvetica', 'bold');
   pdf.text(`${l.customer}:`, margin, yPos + 3);
   pdf.setFont('helvetica', 'normal');
-  pdf.text(customer?.name || '-', margin + 25, yPos + 3);
+  pdf.text(customerName, margin + 25, yPos + 3);
   
   if (customer?.company) {
     pdf.setFont('helvetica', 'bold');
     pdf.text(`${l.company}:`, margin + 80, yPos + 3);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(customer.company, margin + 100, yPos + 3);
+    pdf.text(companyName, margin + 100, yPos + 3);
   }
   
   yPos += 7;
@@ -80,7 +104,7 @@ export async function exportOrderAsPDF(order, customer, brandName, includePrices
   pdf.setFont('helvetica', 'bold');
   pdf.text(`${l.brand}:`, margin, yPos + 3);
   pdf.setFont('helvetica', 'normal');
-  pdf.text(brandName, margin + 25, yPos + 3);
+  pdf.text(brandLabel, margin + 25, yPos + 3);
   
   pdf.setFont('helvetica', 'bold');
   pdf.text(`${l.date}:`, margin + 80, yPos + 3);
@@ -165,8 +189,8 @@ export async function exportOrderAsPDF(order, customer, brandName, includePrices
     pdf.text((index + 1).toString(), xPos + colWidths[0] / 2, yPos + 5, { align: 'center' });
     xPos += colWidths[0];
     
-    // Product name with text wrapping
-    const productName = item.product_name.split('|')[0]?.trim() || '';
+    // Product name with text wrapping - transliterate Turkish chars
+    const productName = transliterateTurkish(item.product_name.split('|')[0]?.trim() || '');
     const maxProductName = colWidths[1] - 2;
     const splitName = pdf.splitTextToSize(productName, maxProductName);
     pdf.text(splitName, xPos + 1, yPos + 3);
@@ -229,7 +253,7 @@ export async function exportOrderAsPDF(order, customer, brandName, includePrices
     pdf.text(`${l.notes}:`, margin, yPos);
     yPos += 5;
     pdf.setFont('helvetica', 'normal');
-    const splitNotes = pdf.splitTextToSize(order.notes, contentWidth - 4);
+    const splitNotes = pdf.splitTextToSize(notesText, contentWidth - 4);
     const notesHeight = splitNotes.length * 4.5 + 3;
     pdf.setFillColor(255, 255, 240);
     pdf.setDrawColor(240, 240, 200);
