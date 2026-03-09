@@ -232,8 +232,7 @@ export async function exportOrderAsPDF(order, customer, brandName, includePrices
   }
 
   // Save PDF
-  const customerName = customer?.name?.replace(/\s+/g, '_') || 'Order';
-  const priceSuffix = includePrices ? l.withPrices : l.withoutPrices;
-  const filename = `Order_${order.id.slice(0, 8)}_${customerName}_${priceSuffix}.pdf`;
+  const fileNameSuffix = includePrices ? l.withPrices : l.withoutPrices;
+  const filename = `Order_${order.id.slice(0, 8)}_${(customer?.name || 'Order').replace(/\s+/g, '_')}_${fileNameSuffix}.pdf`;
   pdf.save(filename);
 }
