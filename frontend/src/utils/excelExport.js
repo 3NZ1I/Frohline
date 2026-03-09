@@ -260,13 +260,13 @@ export async function exportOrderToXLSX(orderData, items, customer, brandName, l
       index + 1,
       item.product_name.split('|')[0]?.trim(),
       item.product_sku,
-      item.quantity,
-      parseFloat((weight * item.quantity).toFixed(2)),
+      item.quantity.toString(),
+      (weight * item.quantity).toFixed(2),
     ];
 
     if (includePrices) {
-      rowData.push(parseFloat(item.unit_price.toFixed(2)));
-      rowData.push(parseFloat(item.subtotal.toFixed(2)));
+      rowData.push(item.unit_price.toFixed(2));
+      rowData.push(item.subtotal.toFixed(2));
     }
 
     const dataRow = worksheet.getRow(row);
@@ -296,7 +296,7 @@ export async function exportOrderToXLSX(orderData, items, customer, brandName, l
     bottom: { style: 'thin' },
     right: { style: 'thin' },
   };
-  worksheet.getCell(`B${row}`).value = totalQty;
+  worksheet.getCell(`B${row}`).value = totalQty.toString();
   worksheet.getCell(`B${row}`).border = {
     top: { style: 'thin' },
     left: { style: 'thin' },
