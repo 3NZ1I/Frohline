@@ -28,7 +28,7 @@ if docker ps | grep -q cloudflared-tunnel; then
     echo ""
     echo "📊 Your services are now available at:"
     echo "   Frontend: https://froh.bessar.work"
-    echo "   Backend:  https://api.bessar.work"
+    echo "   Backend:  https://api1.bessar.work"
     echo ""
     echo "📝 View logs: docker logs cloudflared-tunnel --tail 50 -f"
     echo "⏹️  Stop tunnel: docker stop cloudflared-tunnel"
