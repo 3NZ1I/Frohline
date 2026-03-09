@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useLanguage } from '../context/LanguageContext';
-import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
 const API = axios.create({
@@ -18,7 +17,6 @@ function ProductionDetails() {
   const [filterPeriod, setFilterPeriod] = useState('all'); // all, weekly, monthly, annual
   const [selectedReports, setSelectedReports] = useState(new Set());
   const [selectAll, setSelectAll] = useState(false);
-  const reportsContainerRef = React.useRef(null);
   
   // 8 production lines
   const [lines, setLines] = useState([
@@ -154,56 +152,147 @@ function ProductionDetails() {
     }
   };
 
-  // Export selected reports to PDF
+  // Export selected reports to PDF with full details
   const handleExportPDF = async () => {
     if (selectedReports.size === 0) {
       alert('Please select at least one report to export');
       return;
     }
 
-    const element = reportsContainerRef.current;
-    if (!element) return;
-
     const pdfLabels = {
-      en: 'Production_Report',
-      tr: 'Uretim_Raporu',
-      ar: 'تقرير_الإنتاج',
+      en: { title: 'Production Report', date: 'Date', line: 'Line', type: 'Production Type', speed: 'Speed', expected: 'Expected', actual: 'Actual', difference: 'Difference', notes: 'Notes', totalExpected: 'Total Expected', totalActual: 'Total Actual', totalDifference: 'Total Difference', efficiency: 'Efficiency', createdBy: 'Created By' },
+      tr: { title: 'Üretim Raporu', date: 'Tarih', line: 'Hat', type: 'Üretim Tipi', speed: 'Hız', expected: 'Beklenen', actual: 'Gerçekleşen', difference: 'Fark', notes: 'Notlar', totalExpected: 'Toplam Beklenen', totalActual: 'Toplam Gerçekleşen', totalDifference: 'Toplam Fark', efficiency: 'Verimlilik', createdBy: 'Oluşturan' },
+      ar: { title: 'تقرير الإنتاج', date: 'التاريخ', line: 'الخط', type: 'نوع الإنتاج', speed: 'السرعة', expected: 'المتوقع', actual: 'الفعلي', difference: 'الفرق', notes: 'ملاحظات', totalExpected: 'إجمالي المتوقع', totalActual: 'إجمالي الفعلي', totalDifference: 'إجمالي الفرق', efficiency: 'الكفاءة', createdBy: 'أنشأ بواسطة' },
     };
 
-    const fileName = `${pdfLabels[language] || 'Production_Report'}_${new Date().toISOString().split('T')[0]}.pdf`;
+    const l = pdfLabels[language] || pdfLabels.en;
+    const fileName = `Production_Report_${new Date().toISOString().split('T')[0]}.pdf`;
 
     try {
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        windowWidth: 1920,
-      });
-
-      const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF({
         orientation: 'landscape',
         unit: 'mm',
         format: 'a4',
       });
 
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = pdfWidth - 20;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      let yPos = 15;
+      let pageNum = 1;
 
-      let heightLeft = imgHeight;
-      let position = 10;
+      const selectedReportsList = reports.filter(r => selectedReports.has(r.id));
 
-      pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-      heightLeft -= pdfHeight - 20;
+      selectedReportsList.forEach((report, reportIndex) => {
+        // Add page break for each report (except first)
+        if (reportIndex > 0) {
+          pdf.addPage();
+          yPos = 15;
+          pageNum++;
+        }
 
-      while (heightLeft > 0) {
-        pdf.addPage();
-        position = heightLeft - imgHeight;
-        pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-        heightLeft -= pdfHeight - 20;
-      }
+        // Calculate report totals
+        const totalExpected = report.line_1_expected + report.line_2_expected + report.line_3_expected + report.line_4_expected +
+                             report.line_5_expected + report.line_6_expected + report.line_7_expected + report.line_8_expected;
+        const totalActual = report.line_1_actual + report.line_2_actual + report.line_3_actual + report.line_4_actual +
+                           report.line_5_actual + report.line_6_actual + report.line_7_actual + report.line_8_actual;
+        const totalDiff = totalActual - totalExpected;
+        const efficiency = totalExpected > 0 ? ((totalActual / totalExpected) * 100).toFixed(1) : 0;
+
+        // Header
+        pdf.setFontSize(16);
+        pdf.setFont(undefined, 'bold');
+        pdf.text(`${l.title} - ${new Date(report.report_date).toLocaleDateString()}`, 15, yPos);
+        yPos += 8;
+
+        // Info section
+        pdf.setFontSize(10);
+        pdf.setFont(undefined, 'normal');
+        pdf.text(`${l.createdBy}: ${report.created_by}`, 15, yPos);
+        yPos += 6;
+
+        // Lines table header
+        pdf.setFont(undefined, 'bold');
+        pdf.text(l.line, 15, yPos);
+        pdf.text(l.type, 35, yPos);
+        pdf.text(l.speed, 80, yPos);
+        pdf.text(l.expected, 110, yPos);
+        pdf.text(l.actual, 140, yPos);
+        pdf.text(l.difference, 170, yPos);
+        yPos += 6;
+
+        // Draw header line
+        pdf.line(15, yPos, 260, yPos);
+        yPos += 6;
+
+        // Lines data
+        pdf.setFont(undefined, 'normal');
+        const lines = [
+          { type: report.line_1_type, speed: report.line_1_speed, expected: report.line_1_expected, actual: report.line_1_actual, notes: report.line_1_notes },
+          { type: report.line_2_type, speed: report.line_2_speed, expected: report.line_2_expected, actual: report.line_2_actual, notes: report.line_2_notes },
+          { type: report.line_3_type, speed: report.line_3_speed, expected: report.line_3_expected, actual: report.line_3_actual, notes: report.line_3_notes },
+          { type: report.line_4_type, speed: report.line_4_speed, expected: report.line_4_expected, actual: report.line_4_actual, notes: report.line_4_notes },
+          { type: report.line_5_type, speed: report.line_5_speed, expected: report.line_5_expected, actual: report.line_5_actual, notes: report.line_5_notes },
+          { type: report.line_6_type, speed: report.line_6_speed, expected: report.line_6_expected, actual: report.line_6_actual, notes: report.line_6_notes },
+          { type: report.line_7_type, speed: report.line_7_speed, expected: report.line_7_expected, actual: report.line_7_actual, notes: report.line_7_notes },
+          { type: report.line_8_type, speed: report.line_8_speed, expected: report.line_8_expected, actual: report.line_8_actual, notes: report.line_8_notes },
+        ];
+
+        lines.forEach((line, i) => {
+          if (yPos > pageHeight - 40) {
+            pdf.addPage();
+            yPos = 15;
+            pageNum++;
+          }
+          const diff = line.actual - line.expected;
+          pdf.text(`Line ${i + 1}`, 15, yPos);
+          pdf.text(line.type || '-', 35, yPos);
+          pdf.text(line.speed ? line.speed.toString() : '0', 80, yPos);
+          pdf.text(line.expected ? line.expected.toFixed(1) : '0', 110, yPos);
+          pdf.text(line.actual ? line.actual.toFixed(1) : '0', 140, yPos);
+          pdf.setTextColor(diff >= 0 ? 0 : 255, diff >= 0 ? 128 : 0, 0);
+          pdf.text((diff >= 0 ? '+' : '') + diff.toFixed(1), 170, yPos);
+          pdf.setTextColor(0, 0, 0);
+          yPos += 6;
+        });
+
+        // Totals section
+        yPos += 5;
+        pdf.line(15, yPos, 260, yPos);
+        yPos += 8;
+
+        pdf.setFont(undefined, 'bold');
+        pdf.text(`${l.totalExpected}: ${totalExpected.toFixed(1)} m`, 15, yPos);
+        pdf.text(`${l.totalActual}: ${totalActual.toFixed(1)} m`, 80, yPos);
+        pdf.text(`${l.totalDifference}: ${(totalDiff >= 0 ? '+' : '') + totalDiff.toFixed(1)} m`, 140, yPos);
+        yPos += 8;
+        pdf.setTextColor(totalDiff >= 0 ? 0 : 255, totalDiff >= 0 ? 128 : 0, 0);
+        pdf.text(`${l.efficiency}: ${efficiency}%`, 15, yPos);
+        pdf.setTextColor(0, 0, 0);
+        yPos += 10;
+
+        // Notes section
+        const allNotes = lines.map((l, i) => l.notes ? `Line ${i + 1}: ${l.notes}` : null).filter(n => n);
+        if (allNotes.length > 0) {
+          pdf.setFont(undefined, 'bold');
+          pdf.text(`${l.notes}:`, 15, yPos);
+          yPos += 6;
+          pdf.setFont(undefined, 'normal');
+          allNotes.forEach(note => {
+            if (yPos > pageHeight - 20) {
+              pdf.addPage();
+              yPos = 15;
+              pageNum++;
+            }
+            pdf.text(`• ${note}`, 20, yPos);
+            yPos += 5;
+          });
+        }
+
+        // Page footer
+        pdf.setFontSize(8);
+        pdf.setFont(undefined, 'normal');
+        pdf.text(`Page ${pageNum}`, pageWidth - 30, pageHeight - 10);
+      });
 
       pdf.save(fileName);
     } catch (error) {
@@ -502,7 +591,7 @@ function ProductionDetails() {
         </form>
       ) : (
         /* Reports List */
-        <div ref={reportsContainerRef}>
+        <div>
           <div className="card">
             <div className="card-body">
               {/* Filter and Actions Toolbar */}
