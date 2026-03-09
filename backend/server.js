@@ -765,12 +765,12 @@ app.post('/api/production-reports', (req, res) => {
       created_by,
       lines,
     } = req.body;
-    
+
     const id = uuidv4();
-    
+
     const insertReport = db.prepare(`
       INSERT INTO production_reports (
-        id, report_date, created_by, created_at,
+        id, report_date, created_by,
         line_1_type, line_1_speed, line_1_expected, line_1_actual, line_1_notes,
         line_2_type, line_2_speed, line_2_expected, line_2_actual, line_2_notes,
         line_3_type, line_3_speed, line_3_expected, line_3_actual, line_3_notes,
@@ -779,9 +779,9 @@ app.post('/api/production-reports', (req, res) => {
         line_6_type, line_6_speed, line_6_expected, line_6_actual, line_6_notes,
         line_7_type, line_7_speed, line_7_expected, line_7_actual, line_7_notes,
         line_8_type, line_8_speed, line_8_expected, line_8_actual, line_8_notes
-      ) VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
-    
+
     insertReport.run(
       id,
       report_date,
@@ -795,7 +795,7 @@ app.post('/api/production-reports', (req, res) => {
       lines[6]?.type || '', lines[6]?.speed || 0, lines[6]?.expected || 0, lines[6]?.actual || 0, lines[6]?.notes || '',
       lines[7]?.type || '', lines[7]?.speed || 0, lines[7]?.expected || 0, lines[7]?.actual || 0, lines[7]?.notes || ''
     );
-    
+
     const report = db.prepare('SELECT * FROM production_reports WHERE id = ?').get(id);
     res.status(201).json(report);
   } catch (error) {
