@@ -244,7 +244,8 @@ function ProductionDetails() {
             pageNum++;
           }
           const diff = line.actual - line.expected;
-          pdf.text(`Line ${i + 1}`, 15, yPos);
+          const lineLabel = language === 'tr' ? `${i + 1}. Hat` : language === 'ar' ? `الخط ${i + 1}` : `Line ${i + 1}`;
+          pdf.text(lineLabel, 15, yPos);
           pdf.text(line.type || '-', 35, yPos);
           pdf.text(line.speed ? line.speed.toString() : '0', 80, yPos);
           pdf.text(line.expected ? line.expected.toFixed(1) : '0', 110, yPos);
@@ -271,7 +272,11 @@ function ProductionDetails() {
         yPos += 10;
 
         // Notes section
-        const allNotes = lines.map((l, i) => l.notes ? `Line ${i + 1}: ${l.notes}` : null).filter(n => n);
+        const allNotes = lines.map((l, i) => {
+          if (!l.notes) return null;
+          const lineLabel = language === 'tr' ? `${i + 1}. Hat` : language === 'ar' ? `الخط ${i + 1}` : `Line ${i + 1}`;
+          return `${lineLabel}: ${l.notes}`;
+        }).filter(n => n);
         if (allNotes.length > 0) {
           pdf.setFont(undefined, 'bold');
           pdf.text(`${l.notes}:`, 15, yPos);
