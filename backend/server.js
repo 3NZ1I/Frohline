@@ -526,9 +526,10 @@ app.get('/api/analytics/overview', (req, res) => {
     `).all();
     
     const recentOrders = db.prepare(`
-      SELECT id, customer_name, total_amount, status, created_at
-      FROM orders
-      ORDER BY created_at DESC
+      SELECT o.id, c.name as customer_name, o.total_amount, o.status, o.created_at
+      FROM orders o
+      JOIN customers c ON o.customer_id = c.id
+      ORDER BY o.created_at DESC
       LIMIT 10
     `).all();
     
