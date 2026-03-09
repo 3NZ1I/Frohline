@@ -1,5 +1,6 @@
 // XLSX export with ExcelJS for image support
 import ExcelJS from 'exceljs';
+import { subBrands } from '../data/subBrands';
 
 export function exportToExcel(data, filename) {
   // Create CSV content with UTF-8 BOM for proper Turkish character display
@@ -32,6 +33,7 @@ export async function exportOrderToXLSX(orderData, items, customer, brandName, l
   const tr = {
     title: 'Sipariş Formu',
     customer: 'Müşteri',
+    company: 'Şirket',
     brand: 'Marka',
     date: 'Tarih',
     status: 'Durum',
@@ -50,6 +52,7 @@ export async function exportOrderToXLSX(orderData, items, customer, brandName, l
   const en = {
     title: 'Order Form',
     customer: 'Customer',
+    company: 'Company',
     brand: 'Brand',
     date: 'Date',
     status: 'Status',
@@ -68,6 +71,7 @@ export async function exportOrderToXLSX(orderData, items, customer, brandName, l
   const ar = {
     title: 'نموذج الطلب',
     customer: 'العميل',
+    company: 'الشركة',
     brand: 'العلامة التجارية',
     date: 'التاريخ',
     status: 'الحالة',
@@ -93,6 +97,9 @@ export async function exportOrderToXLSX(orderData, items, customer, brandName, l
   }, 0);
   const totalAmount = items.reduce((sum, item) => sum + (item.subtotal || 0), 0);
 
+  // Get sub-brand logo
+  const subBrand = subBrands.find(b => b.id === orderData.sub_brand_id);
+
   // Create workbook
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Order');
@@ -102,74 +109,154 @@ export async function exportOrderToXLSX(orderData, items, customer, brandName, l
     worksheet.properties.rightToLeft = true;
   }
 
-  // Column widths
-  worksheet.columns = [
-    { key: 'label', width: 15 },
-    { key: 'value', width: 40 },
-  ];
+  // Define all columns at once with proper widths
+  const numColumns = includePrices ? 7 : 5;
+  worksheet.columns = [];
+  for (let i = 0; i < numColumns; i++) {
+    worksheet.columns.push({ width: 10 });
+  }
 
-  // Header with logo placeholder
-  worksheet.mergeCells('A1:B1');
-  const headerCell = worksheet.getCell('A1');
+  // Set specific column widths
+  worksheet.getColumn(1).width = 8;   // #
+  worksheet.getColumn(2).width = 50;  // Product Name
+  worksheet.getColumn(3).width = 15;  // SKU
+  worksheet.getColumn(4).width = 10;  // Qty
+  worksheet.getColumn(5).width = 15;  // Weight
+  if (includePrices) {
+    worksheet.getColumn(6).width = 15;  // Price
+    worksheet.getColumn(7).width = 15;  // Subtotal
+  }
+
+  // Row counter
+  let row = 1;
+
+  // Header with title
+  worksheet.mergeCells(`A${row}:${String.fromCharCode(64 + numColumns)}${row}`);
+  const headerCell = worksheet.getCell(`A${row}`);
   headerCell.value = t.title;
   headerCell.font = { size: 20, bold: true };
   headerCell.alignment = { vertical: 'middle', horizontal: 'center' };
+  headerCell.border = {
+    top: { style: 'thin' },
+    left: { style: 'thin' },
+    bottom: { style: 'thick' },
+    right: { style: 'thin' },
+  };
+  row++;
 
-  // Add Frohline logo if available
+  // Add blank row
+  row++;
+
+  // Add Frohline logo and Sub-brand logo if available
   try {
-    const logoResponse = await fetch('/company-logo.png');
-    if (logoResponse.ok) {
-      const logoBuffer = await logoResponse.arrayBuffer();
+    // Frohline logo
+    const frohlineLogoResponse = await fetch('/company-logo.png');
+    if (frohlineLogoResponse.ok) {
+      const logoBuffer = await frohlineLogoResponse.arrayBuffer();
       const logoId = workbook.addImage({
         buffer: Buffer.from(logoBuffer),
         extension: 'png',
       });
-      logoId.nm = 'Frohline Logo';
       worksheet.addImage(logoId, {
-        tl: { col: 0.5, row: 0 },
-        ext: { width: 120, height: 40 },
+        tl: { col: 0.5, row: row - 1 },
+        ext: { width: 100, height: 35 },
       });
     }
+
+    // Sub-brand logo
+    if (subBrand?.logo) {
+      const subBrandLogoResponse = await fetch(subBrand.logo);
+      if (subBrandLogoResponse.ok) {
+        const subBrandBuffer = await subBrandLogoResponse.arrayBuffer();
+        const subBrandId = workbook.addImage({
+          buffer: Buffer.from(subBrandBuffer),
+          extension: 'png',
+        });
+        worksheet.addImage(subBrandId, {
+          tl: { col: 3, row: row - 1 },
+          ext: { width: 80, height: 35 },
+        });
+      }
+    }
   } catch (e) {
-    console.log('Logo not available');
+    console.log('Logo not available:', e);
   }
+
+  row++;
 
   // Order details
   const details = [
-    [t.customer, customer?.name || ''],
-    [customer?.company ? t.company || 'Company' : t.brand, customer?.company || brandName],
-    [t.date, date],
-    [t.status, orderData.status],
+    [t.customer, customer?.name || '', customer?.company || ''],
+    [t.brand, brandName, ''],
+    [t.date, date, ''],
+    [t.status, orderData.status, ''],
   ];
 
-  details.forEach(([label, value], index) => {
-    worksheet.getCell(`A${index + 3}`).value = label;
-    worksheet.getCell(`A${index + 3}`).font = { bold: true };
-    worksheet.getCell(`B${index + 3}`).value = value;
+  details.forEach(([label, value, extra]) => {
+    worksheet.getCell(`A${row}`).value = label;
+    worksheet.getCell(`A${row}`).font = { bold: true };
+    worksheet.getCell(`A${row}`).border = {
+      top: { style: 'thin' },
+      left: { style: 'thin' },
+      bottom: { style: 'thin' },
+      right: { style: 'thin' },
+    };
+
+    worksheet.getCell(`B${row}`).value = value;
+    worksheet.getCell(`B${row}`).border = {
+      top: { style: 'thin' },
+      left: { style: 'thin' },
+      bottom: { style: 'thin' },
+      right: { style: 'thin' },
+    };
+
+    if (extra) {
+      worksheet.getCell(`C${row}`).value = extra;
+      worksheet.getCell(`C${row}`).border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' },
+      };
+    }
+
+    row++;
   });
 
+  // Blank row
+  row++;
+
   // Items header
-  const itemsStartRow = details.length + 5;
   const itemHeader = ['#', t.product, t.sku, t.qty, t.weight];
   if (includePrices) {
     itemHeader.push(t.price);
     itemHeader.push(t.subtotal);
   }
 
-  worksheet.spliceRows(itemsStartRow, 0, [itemHeader]);
-  const headerRow = worksheet.getRow(itemsStartRow);
-  headerRow.font = { bold: true };
-  headerRow.fill = {
-    type: 'pattern',
-    pattern: 'solid',
-    fgColor: { argb: 'FFE0E0E0' },
-  };
-  headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+  const headerRow = worksheet.getRow(row);
+  itemHeader.forEach((value, i) => {
+    const cell = headerRow.getCell(i + 1);
+    cell.value = value;
+    cell.font = { bold: true };
+    cell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFD3D3D3' },
+    };
+    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    cell.border = {
+      top: { style: 'thin' },
+      left: { style: 'thin' },
+      bottom: { style: 'thin' },
+      right: { style: 'thin' },
+    };
+  });
+  row++;
 
   // Items data
   items.forEach((item, index) => {
     const weight = item.weight || item.product_weight || 0;
-    const row = [
+    const rowData = [
       index + 1,
       item.product_name.split('|')[0]?.trim(),
       item.product_sku,
@@ -178,65 +265,107 @@ export async function exportOrderToXLSX(orderData, items, customer, brandName, l
     ];
 
     if (includePrices) {
-      row.push(parseFloat(item.unit_price.toFixed(2)));
-      row.push(parseFloat(item.subtotal.toFixed(2)));
+      rowData.push(parseFloat(item.unit_price.toFixed(2)));
+      rowData.push(parseFloat(item.subtotal.toFixed(2)));
     }
 
-    const rowNum = itemsStartRow + index + 1;
-    worksheet.spliceRows(rowNum, 0, [row]);
-    worksheet.getRow(rowNum).alignment = { vertical: 'middle' };
+    const dataRow = worksheet.getRow(row);
+    rowData.forEach((value, i) => {
+      const cell = dataRow.getCell(i + 1);
+      cell.value = value;
+      cell.alignment = { vertical: 'middle' };
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' },
+      };
+    });
+    row++;
   });
 
-  // Set column widths for items
-  const itemColWidths = [8, 45, 15, 10, 15];
-  if (includePrices) {
-    itemColWidths.push(15, 15);
-  }
-  itemColWidths.forEach((width, i) => {
-    worksheet.getColumn(i + 1).width = width;
-  });
+  // Blank row
+  row++;
 
   // Totals
-  const totalsRow = itemsStartRow + items.length + 2;
-  worksheet.getCell(`A${totalsRow}`).value = t.totalQty;
-  worksheet.getCell(`A${totalsRow}`).font = { bold: true };
-  worksheet.getCell(`B${totalsRow}`).value = totalQty;
+  worksheet.getCell(`A${row}`).value = t.totalQty;
+  worksheet.getCell(`A${row}`).font = { bold: true };
+  worksheet.getCell(`A${row}`).border = {
+    top: { style: 'thin' },
+    left: { style: 'thin' },
+    bottom: { style: 'thin' },
+    right: { style: 'thin' },
+  };
+  worksheet.getCell(`B${row}`).value = totalQty;
+  worksheet.getCell(`B${row}`).border = {
+    top: { style: 'thin' },
+    left: { style: 'thin' },
+    bottom: { style: 'thin' },
+    right: { style: 'thin' },
+  };
+  row++;
 
-  worksheet.getCell(`A${totalsRow + 1}`).value = t.totalWeight;
-  worksheet.getCell(`A${totalsRow + 1}`).font = { bold: true };
-  worksheet.getCell(`B${totalsRow + 1}`).value = `${totalWeight.toFixed(2)} kg`;
+  worksheet.getCell(`A${row}`).value = t.totalWeight;
+  worksheet.getCell(`A${row}`).font = { bold: true };
+  worksheet.getCell(`A${row}`).border = {
+    top: { style: 'thin' },
+    left: { style: 'thin' },
+    bottom: { style: 'thin' },
+    right: { style: 'thin' },
+  };
+  worksheet.getCell(`B${row}`).value = `${totalWeight.toFixed(2)} kg`;
+  worksheet.getCell(`B${row}`).border = {
+    top: { style: 'thin' },
+    left: { style: 'thin' },
+    bottom: { style: 'thin' },
+    right: { style: 'thin' },
+  };
+  row++;
 
   if (includePrices) {
-    worksheet.getCell(`A${totalsRow + 2}`).value = t.totalAmount;
-    worksheet.getCell(`A${totalsRow + 2}`).font = { bold: true };
-    worksheet.getCell(`B${totalsRow + 2}`).value = `$${totalAmount.toFixed(2)}`;
+    worksheet.getCell(`A${row}`).value = t.totalAmount;
+    worksheet.getCell(`A${row}`).font = { bold: true };
+    worksheet.getCell(`A${row}`).border = {
+      top: { style: 'thin' },
+      left: { style: 'thin' },
+      bottom: { style: 'thin' },
+      right: { style: 'thin' },
+    };
+    worksheet.getCell(`B${row}`).value = `$${totalAmount.toFixed(2)}`;
+    worksheet.getCell(`B${row}`).border = {
+      top: { style: 'thin' },
+      left: { style: 'thin' },
+      bottom: { style: 'thin' },
+      right: { style: 'thin' },
+    };
+    row++;
   }
 
-  // Notes
-  const notesRow = totalsRow + 5;
-  worksheet.getCell(`A${notesRow}`).value = t.notes;
-  worksheet.getCell(`A${notesRow}`).font = { bold: true };
-  worksheet.getCell(`B${notesRow}`).value = orderData.notes || '';
-  worksheet.getCell(`B${notesRow}`).alignment = { wrapText: true };
+  // Blank row
+  row++;
 
-  // Border styling
-  const lastRow = notesRow + 2;
-  worksheet.eachRow((row, rowNumber) => {
-    if (rowNumber < lastRow) {
-      row.eachCell((cell) => {
-        cell.border = {
-          top: { style: 'thin' },
-          left: { style: 'thin' },
-          bottom: { style: 'thin' },
-          right: { style: 'thin' },
-        };
-      });
-    }
-  });
+  // Notes
+  worksheet.getCell(`A${row}`).value = t.notes;
+  worksheet.getCell(`A${row}`).font = { bold: true };
+  worksheet.getCell(`A${row}`).border = {
+    top: { style: 'thin' },
+    left: { style: 'thin' },
+    bottom: { style: 'thin' },
+    right: { style: 'thin' },
+  };
+  worksheet.getCell(`B${row}`).value = orderData.notes || '';
+  worksheet.getCell(`B${row}`).border = {
+    top: { style: 'thin' },
+    left: { style: 'thin' },
+    bottom: { style: 'thin' },
+    right: { style: 'thin' },
+  };
+  worksheet.getCell(`B${row}`).alignment = { wrapText: true };
+  worksheet.mergeCells(`B${row}:${String.fromCharCode(64 + numColumns)}${row}`);
 
   // Export file
   const filename = `Order_${customer?.name?.replace(/\s+/g, '_') || 'New'}_${includePrices ? 'with_prices' : 'no_prices'}_${new Date().getTime()}.xlsx`;
-  
+
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer], {
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
