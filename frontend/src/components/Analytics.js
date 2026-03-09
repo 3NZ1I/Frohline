@@ -182,8 +182,6 @@ function Analytics() {
     );
   }
 
-  const isRTL = language === 'ar';
-
   // Print/Export to PDF function
   const handlePrintPDF = async () => {
     const element = dashboardRef.current;
