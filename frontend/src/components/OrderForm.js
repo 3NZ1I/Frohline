@@ -5,6 +5,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { subBrands, getSubBrandName } from '../data/subBrands';
 import { exportOrderToXLSX } from '../utils/excelExport';
 import SubBrandSelector from './SubBrandSelector';
+import jsPDF from 'jspdf';
 
 function OrderForm() {
   const { id } = useParams();
@@ -128,12 +129,124 @@ function OrderForm() {
   const totalAmount = formData.items.reduce((sum, item) => sum + item.subtotal, 0);
   const totalWeight = formData.items.reduce((sum, item) => sum + (item.weight * item.quantity), 0);
 
-  // Export to XLSX (CSV format)
+  // Export to XLSX
   const exportToXLSX = (includePrices = true) => {
     const customer = customers.find(c => c.id === formData.customer_id);
     const brandName = formData.sub_brand_id ? getSubBrandName(formData.sub_brand_id, language) : 'N/A';
-    
+
     exportOrderToXLSX(formData, formData.items, customer, brandName, language, includePrices);
+  };
+
+  // Export to PDF
+  const exportToPDF = (includePrices = true) => {
+    const customer = customers.find(c => c.id === formData.customer_id);
+    const brandName = formData.sub_brand_id ? getSubBrandName(formData.sub_brand_id, language) : 'N/A';
+
+    const pdfLabels = {
+      en: { title: 'Order Form', customer: 'Customer', company: 'Company', brand: 'Brand', date: 'Date', status: 'Status', product: 'Product', sku: 'SKU', qty: 'Qty', weight: 'Weight', price: 'Price', subtotal: 'Subtotal', totalQty: 'Total Qty', totalWeight: 'Total Weight', totalAmount: 'Total Amount', notes: 'Notes', withPrices: 'with_prices', withoutPrices: 'without_prices' },
+      tr: { title: 'Sipariş Formu', customer: 'Müşteri', company: 'Şirket', brand: 'Marka', date: 'Tarih', status: 'Durum', product: 'Ürün', sku: 'SKU', qty: 'Adet', weight: 'Ağırlık', price: 'Fiyat', subtotal: 'Ara Toplam', totalQty: 'Toplam Adet', totalWeight: 'Toplam Ağırlık', totalAmount: 'Toplam Tutar', notes: 'Notlar', withPrices: 'fiyatli', withoutPrices: 'fiyatsiz' },
+      ar: { title: 'نموذج الطلب', customer: 'العميل', company: 'الشركة', brand: 'العلامة التجارية', date: 'التاريخ', status: 'الحالة', product: 'المنتج', sku: 'رمز المنتج', qty: 'الكمية', weight: 'الوزن', price: 'السعر', subtotal: 'المجموع الجزئي', totalQty: 'إجمالي الكمية', totalWeight: 'إجمالي الوزن', totalAmount: 'إجمالي المبلغ', notes: 'ملاحظات', withPrices: 'مع_الأسعار', withoutPrices: 'بدون_أسعار' },
+    };
+
+    const l = pdfLabels[language] || pdfLabels.en;
+    const date = new Date().toLocaleDateString(language === 'ar' ? 'ar-SA' : language === 'tr' ? 'tr-TR' : 'en-US');
+
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4',
+    });
+
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    let yPos = 15;
+
+    // Header
+    pdf.setFontSize(18);
+    pdf.setFont(undefined, 'bold');
+    pdf.text(l.title, pageWidth / 2, yPos, { align: 'center' });
+    yPos += 10;
+
+    // Order info
+    pdf.setFontSize(11);
+    pdf.setFont(undefined, 'normal');
+    pdf.text(`${l.customer}: ${customer?.name || ''}`, 15, yPos);
+    yPos += 6;
+    if (customer?.company) {
+      pdf.text(`${l.company}: ${customer.company}`, 15, yPos);
+      yPos += 6;
+    }
+    pdf.text(`${l.brand}: ${brandName}`, 15, yPos);
+    yPos += 6;
+    pdf.text(`${l.date}: ${date}`, 15, yPos);
+    yPos += 6;
+    pdf.text(`${l.status}: ${formData.status}`, 15, yPos);
+    yPos += 10;
+
+    // Products table header
+    pdf.setFont(undefined, 'bold');
+    pdf.text('#', 15, yPos);
+    pdf.text(l.product, 25, yPos);
+    pdf.text(l.sku, 90, yPos);
+    pdf.text(l.qty, 130, yPos);
+    pdf.text(l.weight, 150, yPos);
+    if (includePrices) {
+      pdf.text(l.price, 170, yPos);
+      pdf.text(l.subtotal, 190, yPos);
+    }
+    yPos += 6;
+    pdf.line(15, yPos, 200, yPos);
+    yPos += 6;
+
+    // Products data
+    pdf.setFont(undefined, 'normal');
+    formData.items.forEach((item, index) => {
+      if (yPos > 270) {
+        pdf.addPage();
+        yPos = 15;
+      }
+      const weight = item.weight || item.product_weight || 0;
+      pdf.text((index + 1).toString(), 15, yPos);
+      pdf.text(item.product_name.split('|')[0]?.trim() || '', 25, yPos);
+      pdf.text(item.product_sku || '', 90, yPos);
+      pdf.text(item.quantity.toString(), 130, yPos);
+      pdf.text(`${(weight * item.quantity).toFixed(2)} m`, 150, yPos);
+      if (includePrices) {
+        pdf.text(`$${item.unit_price.toFixed(2)}`, 170, yPos);
+        pdf.text(`$${item.subtotal.toFixed(2)}`, 190, yPos);
+      }
+      yPos += 6;
+    });
+
+    // Totals
+    yPos += 5;
+    pdf.line(15, yPos, 200, yPos);
+    yPos += 8;
+
+    pdf.setFont(undefined, 'bold');
+    pdf.text(`${l.totalQty}: ${totalAmount}`, 15, yPos);
+    yPos += 6;
+    pdf.text(`${l.totalWeight}: ${totalWeight.toFixed(2)} m`, 15, yPos);
+    if (includePrices) {
+      yPos += 6;
+      pdf.text(`${l.totalAmount}: $${totalAmount.toFixed(2)}`, 15, yPos);
+    }
+    yPos += 10;
+
+    // Notes
+    if (formData.notes) {
+      pdf.setFont(undefined, 'bold');
+      pdf.text(`${l.notes}:`, 15, yPos);
+      yPos += 6;
+      pdf.setFont(undefined, 'normal');
+      const splitNotes = pdf.splitTextToSize(formData.notes, 180);
+      pdf.text(splitNotes, 15, yPos);
+    }
+
+    // Save PDF
+    const customerName = customer?.name?.replace(/\s+/g, '_') || 'New';
+    const priceSuffix = includePrices ? l.withPrices : l.withoutPrices;
+    const filename = `Order_${customerName}_${priceSuffix}.pdf`;
+    pdf.save(filename);
   };
 
   const handleSubmit = async (e) => {
@@ -180,20 +293,39 @@ function OrderForm() {
           </button>
           {formData.items.length > 0 && (
             <>
-              <button 
-                className="btn btn-success" 
-                onClick={() => exportToXLSX(true)}
-                title="Download with prices"
-              >
-                📊 XLSX 💰
-              </button>
-              <button 
-                className="btn btn-info text-white" 
-                onClick={() => exportToXLSX(false)}
-                title="Download without prices"
-              >
-                📊 XLSX
-              </button>
+              <div className="dropdown">
+                <button
+                  className="btn btn-success dropdown-toggle"
+                  type="button"
+                  data-bs-toggle="dropdown"
+                  aria-expanded="false"
+                >
+                  📥 Export
+                </button>
+                <ul className="dropdown-menu">
+                  <li>
+                    <button className="dropdown-item" onClick={() => exportToXLSX(true)}>
+                      📊 XLSX (With Prices)
+                    </button>
+                  </li>
+                  <li>
+                    <button className="dropdown-item" onClick={() => exportToXLSX(false)}>
+                      📊 XLSX (No Prices)
+                    </button>
+                  </li>
+                  <li><hr className="dropdown-divider" /></li>
+                  <li>
+                    <button className="dropdown-item" onClick={() => exportToPDF(true)}>
+                      📄 PDF (With Prices)
+                    </button>
+                  </li>
+                  <li>
+                    <button className="dropdown-item" onClick={() => exportToPDF(false)}>
+                      📄 PDF (No Prices)
+                    </button>
+                  </li>
+                </ul>
+              </div>
             </>
           )}
         </div>
