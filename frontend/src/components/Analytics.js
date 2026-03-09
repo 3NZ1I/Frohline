@@ -576,25 +576,25 @@ function Analytics() {
       {/* Production Analytics Section */}
       <div className="card mb-4">
         <div className="card-header d-flex justify-content-between align-items-center">
-          <h5 className="mb-0">🏭 Production Analytics</h5>
+          <h5 className="mb-0">{language === 'tr' ? '🏭 Üretim Analitikleri' : language === 'ar' ? '🏭 تحليلات الإنتاج' : '🏭 Production Analytics'}</h5>
           <div className="btn-group" role="group" dir="ltr">
             <button
               className={`btn btn-sm ${productionPeriod === 'daily' ? 'btn-primary' : 'btn-outline-primary'}`}
               onClick={() => setProductionPeriod('daily')}
             >
-              Daily
+              {language === 'tr' ? 'Günlük' : language === 'ar' ? 'يومي' : 'Daily'}
             </button>
             <button
               className={`btn btn-sm ${productionPeriod === 'weekly' ? 'btn-primary' : 'btn-outline-primary'}`}
               onClick={() => setProductionPeriod('weekly')}
             >
-              Weekly
+              {language === 'tr' ? 'Haftalık' : language === 'ar' ? 'أسبوعي' : 'Weekly'}
             </button>
             <button
               className={`btn btn-sm ${productionPeriod === 'monthly' ? 'btn-primary' : 'btn-outline-primary'}`}
               onClick={() => setProductionPeriod('monthly')}
             >
-              Monthly
+              {language === 'tr' ? 'Aylık' : language === 'ar' ? 'شهري' : 'Monthly'}
             </button>
           </div>
         </div>
@@ -602,7 +602,7 @@ function Analytics() {
           <div className="row mb-4">
             {/* Production Trends */}
             <div className="col-md-8 mb-3">
-              <h6 className="mb-3">Production Trends</h6>
+              <h6 className="mb-3">{language === 'tr' ? 'Üretim Trendleri' : language === 'ar' ? 'اتجاهات الإنتاج' : 'Production Trends'}</h6>
               <ResponsiveContainer width="100%" height={250}>
                 <LineChart data={production?.productionTrends || []}>
                   <CartesianGrid strokeDasharray="3 3" />
@@ -610,21 +610,21 @@ function Analytics() {
                   <YAxis />
                   <Tooltip />
                   <Legend />
-                  <Line type="monotone" dataKey="total_expected" name="Expected (m)" stroke="#8884d8" strokeWidth={2} />
-                  <Line type="monotone" dataKey="total_actual" name="Actual (m)" stroke="#82ca9d" strokeWidth={2} />
+                  <Line type="monotone" dataKey="total_expected" name={language === 'tr' ? 'Beklenen (m)' : language === 'ar' ? 'المتوقع (م)' : 'Expected (m)'} stroke="#8884d8" strokeWidth={2} />
+                  <Line type="monotone" dataKey="total_actual" name={language === 'tr' ? 'Gerçekleşen (m)' : language === 'ar' ? 'الفعلي (م)' : 'Actual (m)'} stroke="#82ca9d" strokeWidth={2} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
 
             {/* Line Efficiency */}
             <div className="col-md-4 mb-3">
-              <h6 className="mb-3">Line Efficiency</h6>
+              <h6 className="mb-3">{language === 'tr' ? 'Hat Verimliliği' : language === 'ar' ? 'كفاءة الخط' : 'Line Efficiency'}</h6>
               <div className="table-responsive">
                 <table className="table table-sm">
                   <thead>
                     <tr>
-                      <th>Line</th>
-                      <th>Efficiency</th>
+                      <th>{language === 'tr' ? 'Hat' : language === 'ar' ? 'الخط' : 'Line'}</th>
+                      <th>{language === 'tr' ? 'Verimlilik' : language === 'ar' ? 'الكفاءة' : 'Efficiency'}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -633,7 +633,7 @@ function Analytics() {
                       const efficiencyClass = efficiency >= 100 ? 'text-success' : efficiency >= 80 ? 'text-warning' : 'text-danger';
                       return (
                         <tr key={lineNum}>
-                          <td>Line {lineNum}</td>
+                          <td>{language === 'tr' ? `${lineNum}. Hat` : language === 'ar' ? `الخط ${lineNum}` : `Line ${lineNum}`}</td>
                           <td className={`fw-bold ${efficiencyClass}`}>
                             {efficiency ? efficiency.toFixed(1) : '0'}%
                           </td>
@@ -649,7 +649,7 @@ function Analytics() {
           {/* Top Production Types */}
           <div className="row">
             <div className="col-md-12">
-              <h6 className="mb-3">Top Production Types</h6>
+              <h6 className="mb-3">{language === 'tr' ? 'En Çok Üretilen Tipler' : language === 'ar' ? 'أكثر أنواع الإنتاج' : 'Top Production Types'}</h6>
               <ResponsiveContainer width="100%" height={200}>
                 <BarChart data={production?.topProductionTypes || []}>
                   <CartesianGrid strokeDasharray="3 3" />
@@ -657,7 +657,7 @@ function Analytics() {
                   <YAxis />
                   <Tooltip />
                   <Legend />
-                  <Bar dataKey="total" name="Total Produced (m)" fill="#82ca9d" />
+                  <Bar dataKey="total" name={language === 'tr' ? 'Toplam Üretim (m)' : language === 'ar' ? 'إجمالي الإنتاج (م)' : 'Total Produced (m)'} fill="#82ca9d" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -666,14 +666,14 @@ function Analytics() {
           {/* Recent Production Reports */}
           <div className="row mt-4">
             <div className="col-md-12">
-              <h6 className="mb-3">Recent Production Reports</h6>
+              <h6 className="mb-3">{language === 'tr' ? 'Son Üretim Raporları' : language === 'ar' ? 'تقارير الإنتاج الأخيرة' : 'Recent Production Reports'}</h6>
               <div className="table-responsive">
                 <table className="table table-sm" dir={isRTL ? 'rtl' : 'ltr'}>
                   <thead>
                     <tr>
-                      <th>Date</th>
-                      <th>Created By</th>
-                      <th>Created At</th>
+                      <th>{language === 'tr' ? 'Tarih' : language === 'ar' ? 'التاريخ' : 'Date'}</th>
+                      <th>{language === 'tr' ? 'Oluşturan' : language === 'ar' ? 'أنشأ بواسطة' : 'Created By'}</th>
+                      <th>{language === 'tr' ? 'Oluşturulma' : language === 'ar' ? 'تاريخ الإنشاء' : 'Created At'}</th>
                     </tr>
                   </thead>
                   <tbody>
