@@ -6,6 +6,7 @@ import OrderForm from './components/OrderForm';
 import Customers from './components/Customers';
 import Products from './components/Products';
 import Analytics from './components/Analytics';
+import ProductionDetails from './components/ProductionDetails';
 
 function Sidebar() {
   const location = useLocation();
@@ -89,6 +90,17 @@ function Sidebar() {
         >
           <span className="me-2">📊</span>
           <span>Analytics</span>
+        </Link>
+
+        <Link
+          className={`nav-link rounded mb-2 d-flex align-items-center ${
+            location.pathname === '/production' ? 'active bg-danger' : 'text-white'
+          }`}
+          to="/production"
+          style={{ padding: '12px 15px', transition: 'all 0.2s' }}
+        >
+          <span className="me-2">🏭</span>
+          <span>Production</span>
         </Link>
       </nav>
 
@@ -181,6 +193,7 @@ function App() {
             <Route path="/customers" element={<Customers />} />
             <Route path="/products" element={<Products />} />
             <Route path="/analytics" element={<Analytics />} />
+            <Route path="/production" element={<ProductionDetails />} />
           </Routes>
         </div>
       </div>

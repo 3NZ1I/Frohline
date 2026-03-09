@@ -18,22 +18,25 @@ function Analytics() {
   const [brands, setBrands] = useState(null);
   const [customers, setCustomers] = useState(null);
   const [trends, setTrends] = useState(null);
+  const [production, setProduction] = useState(null);
   const [trendPeriod, setTrendPeriod] = useState('daily');
+  const [productionPeriod, setProductionPeriod] = useState('daily');
   const dashboardRef = useRef(null);
 
   useEffect(() => {
     loadAnalytics();
-  }, [trendPeriod]);
+  }, [trendPeriod, productionPeriod]);
 
   const loadAnalytics = async () => {
     setLoading(true);
     try {
-      const [overviewRes, productsRes, brandsRes, customersRes, trendsRes] = await Promise.all([
+      const [overviewRes, productsRes, brandsRes, customersRes, trendsRes, productionRes] = await Promise.all([
         API.get('/analytics/overview'),
         API.get('/analytics/products'),
         API.get('/analytics/brands'),
         API.get('/analytics/customers'),
         API.get('/analytics/trends', { params: { period: trendPeriod } }),
+        API.get('/analytics/production', { params: { period: productionPeriod } }),
       ]);
 
       setOverview(overviewRes.data);
@@ -41,6 +44,7 @@ function Analytics() {
       setBrands(brandsRes.data);
       setCustomers(customersRes.data);
       setTrends(trendsRes.data);
+      setProduction(productionRes.data);
     } catch (error) {
       console.error('Error loading analytics:', error);
     }
@@ -565,6 +569,130 @@ function Analytics() {
                 )}
               </tbody>
             </table>
+          </div>
+        </div>
+      </div>
+
+      {/* Production Analytics Section */}
+      <div className="card mb-4">
+        <div className="card-header d-flex justify-content-between align-items-center">
+          <h5 className="mb-0">🏭 Production Analytics</h5>
+          <div className="btn-group" role="group" dir="ltr">
+            <button
+              className={`btn btn-sm ${productionPeriod === 'daily' ? 'btn-primary' : 'btn-outline-primary'}`}
+              onClick={() => setProductionPeriod('daily')}
+            >
+              Daily
+            </button>
+            <button
+              className={`btn btn-sm ${productionPeriod === 'weekly' ? 'btn-primary' : 'btn-outline-primary'}`}
+              onClick={() => setProductionPeriod('weekly')}
+            >
+              Weekly
+            </button>
+            <button
+              className={`btn btn-sm ${productionPeriod === 'monthly' ? 'btn-primary' : 'btn-outline-primary'}`}
+              onClick={() => setProductionPeriod('monthly')}
+            >
+              Monthly
+            </button>
+          </div>
+        </div>
+        <div className="card-body">
+          <div className="row mb-4">
+            {/* Production Trends */}
+            <div className="col-md-8 mb-3">
+              <h6 className="mb-3">Production Trends</h6>
+              <ResponsiveContainer width="100%" height={250}>
+                <LineChart data={production?.productionTrends || []}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="period" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Line type="monotone" dataKey="total_expected" name="Expected (m)" stroke="#8884d8" strokeWidth={2} />
+                  <Line type="monotone" dataKey="total_actual" name="Actual (m)" stroke="#82ca9d" strokeWidth={2} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Line Efficiency */}
+            <div className="col-md-4 mb-3">
+              <h6 className="mb-3">Line Efficiency</h6>
+              <div className="table-responsive">
+                <table className="table table-sm">
+                  <thead>
+                    <tr>
+                      <th>Line</th>
+                      <th>Efficiency</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[1, 2, 3, 4, 5, 6, 7, 8].map((lineNum) => {
+                      const efficiency = production?.lineEfficiency?.[`line_${lineNum}_efficiency`] || 0;
+                      const efficiencyClass = efficiency >= 100 ? 'text-success' : efficiency >= 80 ? 'text-warning' : 'text-danger';
+                      return (
+                        <tr key={lineNum}>
+                          <td>Line {lineNum}</td>
+                          <td className={`fw-bold ${efficiencyClass}`}>
+                            {efficiency ? efficiency.toFixed(1) : '0'}%
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          {/* Top Production Types */}
+          <div className="row">
+            <div className="col-md-12">
+              <h6 className="mb-3">Top Production Types</h6>
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={production?.topProductionTypes || []}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="type" tick={{ fontSize: 10 }} />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="total" name="Total Produced (m)" fill="#82ca9d" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Recent Production Reports */}
+          <div className="row mt-4">
+            <div className="col-md-12">
+              <h6 className="mb-3">Recent Production Reports</h6>
+              <div className="table-responsive">
+                <table className="table table-sm" dir={isRTL ? 'rtl' : 'ltr'}>
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Created By</th>
+                      <th>Created At</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(production?.recentReports || []).map((report, i) => (
+                      <tr key={i}>
+                        <td>{new Date(report.report_date).toLocaleDateString()}</td>
+                        <td>{report.created_by}</td>
+                        <td>{new Date(report.created_at).toLocaleString()}</td>
+                      </tr>
+                    ))}
+                    {(production?.recentReports || []).length === 0 && (
+                      <tr>
+                        <td colSpan="3" className="text-center text-muted">{l.noData}</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </div>
       </div>

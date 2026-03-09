@@ -73,6 +73,55 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
   CREATE INDEX IF NOT EXISTS idx_orders_customer ON orders(customer_id);
+
+  CREATE TABLE IF NOT EXISTS production_reports (
+    id TEXT PRIMARY KEY,
+    report_date TEXT NOT NULL,
+    created_by TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    line_1_type TEXT,
+    line_1_speed REAL,
+    line_1_expected REAL,
+    line_1_actual REAL,
+    line_1_notes TEXT,
+    line_2_type TEXT,
+    line_2_speed REAL,
+    line_2_expected REAL,
+    line_2_actual REAL,
+    line_2_notes TEXT,
+    line_3_type TEXT,
+    line_3_speed REAL,
+    line_3_expected REAL,
+    line_3_actual REAL,
+    line_3_notes TEXT,
+    line_4_type TEXT,
+    line_4_speed REAL,
+    line_4_expected REAL,
+    line_4_actual REAL,
+    line_4_notes TEXT,
+    line_5_type TEXT,
+    line_5_speed REAL,
+    line_5_expected REAL,
+    line_5_actual REAL,
+    line_5_notes TEXT,
+    line_6_type TEXT,
+    line_6_speed REAL,
+    line_6_expected REAL,
+    line_6_actual REAL,
+    line_6_notes TEXT,
+    line_7_type TEXT,
+    line_7_speed REAL,
+    line_7_expected REAL,
+    line_7_actual REAL,
+    line_7_notes TEXT,
+    line_8_type TEXT,
+    line_8_speed REAL,
+    line_8_expected REAL,
+    line_8_actual REAL,
+    line_8_notes TEXT
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_production_date ON production_reports(report_date);
 `);
 
 // Seed initial data
@@ -665,6 +714,252 @@ app.get('/api/analytics/trends', (req, res) => {
   } catch (error) {
     console.error('Trends analytics error:', error);
     res.status(500).json({ error: 'Failed to fetch trends' });
+  }
+});
+
+// ==================== Production Reports API ====================
+
+app.get('/api/production-reports', (req, res) => {
+  try {
+    const { date, limit } = req.query;
+    let query = 'SELECT * FROM production_reports';
+    const params = [];
+    
+    if (date) {
+      query += ' WHERE report_date = ?';
+      params.push(date);
+    }
+    
+    query += ' ORDER BY report_date DESC, created_at DESC';
+    
+    if (limit) {
+      query += ' LIMIT ?';
+      params.push(parseInt(limit));
+    }
+    
+    const reports = db.prepare(query).all(...params);
+    res.json(reports);
+  } catch (error) {
+    console.error('Error fetching production reports:', error);
+    res.status(500).json({ error: 'Failed to fetch production reports' });
+  }
+});
+
+app.get('/api/production-reports/:id', (req, res) => {
+  try {
+    const report = db.prepare('SELECT * FROM production_reports WHERE id = ?').get(req.params.id);
+    if (!report) {
+      return res.status(404).json({ error: 'Report not found' });
+    }
+    res.json(report);
+  } catch (error) {
+    console.error('Error fetching production report:', error);
+    res.status(500).json({ error: 'Failed to fetch production report' });
+  }
+});
+
+app.post('/api/production-reports', (req, res) => {
+  try {
+    const {
+      report_date,
+      created_by,
+      lines,
+    } = req.body;
+    
+    const id = uuidv4();
+    
+    const insertReport = db.prepare(`
+      INSERT INTO production_reports (
+        id, report_date, created_by, created_at,
+        line_1_type, line_1_speed, line_1_expected, line_1_actual, line_1_notes,
+        line_2_type, line_2_speed, line_2_expected, line_2_actual, line_2_notes,
+        line_3_type, line_3_speed, line_3_expected, line_3_actual, line_3_notes,
+        line_4_type, line_4_speed, line_4_expected, line_4_actual, line_4_notes,
+        line_5_type, line_5_speed, line_5_expected, line_5_actual, line_5_notes,
+        line_6_type, line_6_speed, line_6_expected, line_6_actual, line_6_notes,
+        line_7_type, line_7_speed, line_7_expected, line_7_actual, line_7_notes,
+        line_8_type, line_8_speed, line_8_expected, line_8_actual, line_8_notes
+      ) VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    
+    insertReport.run(
+      id,
+      report_date,
+      created_by || 'Unknown',
+      lines[0]?.type || '', lines[0]?.speed || 0, lines[0]?.expected || 0, lines[0]?.actual || 0, lines[0]?.notes || '',
+      lines[1]?.type || '', lines[1]?.speed || 0, lines[1]?.expected || 0, lines[1]?.actual || 0, lines[1]?.notes || '',
+      lines[2]?.type || '', lines[2]?.speed || 0, lines[2]?.expected || 0, lines[2]?.actual || 0, lines[2]?.notes || '',
+      lines[3]?.type || '', lines[3]?.speed || 0, lines[3]?.expected || 0, lines[3]?.actual || 0, lines[3]?.notes || '',
+      lines[4]?.type || '', lines[4]?.speed || 0, lines[4]?.expected || 0, lines[4]?.actual || 0, lines[4]?.notes || '',
+      lines[5]?.type || '', lines[5]?.speed || 0, lines[5]?.expected || 0, lines[5]?.actual || 0, lines[5]?.notes || '',
+      lines[6]?.type || '', lines[6]?.speed || 0, lines[6]?.expected || 0, lines[6]?.actual || 0, lines[6]?.notes || '',
+      lines[7]?.type || '', lines[7]?.speed || 0, lines[7]?.expected || 0, lines[7]?.actual || 0, lines[7]?.notes || ''
+    );
+    
+    const report = db.prepare('SELECT * FROM production_reports WHERE id = ?').get(id);
+    res.status(201).json(report);
+  } catch (error) {
+    console.error('Error creating production report:', error);
+    res.status(500).json({ error: 'Failed to create production report' });
+  }
+});
+
+app.put('/api/production-reports/:id', (req, res) => {
+  try {
+    const {
+      report_date,
+      created_by,
+      lines,
+    } = req.body;
+    
+    const updateReport = db.prepare(`
+      UPDATE production_reports SET
+        report_date = ?,
+        created_by = ?,
+        line_1_type = ?, line_1_speed = ?, line_1_expected = ?, line_1_actual = ?, line_1_notes = ?,
+        line_2_type = ?, line_2_speed = ?, line_2_expected = ?, line_2_actual = ?, line_2_notes = ?,
+        line_3_type = ?, line_3_speed = ?, line_3_expected = ?, line_3_actual = ?, line_3_notes = ?,
+        line_4_type = ?, line_4_speed = ?, line_4_expected = ?, line_4_actual = ?, line_4_notes = ?,
+        line_5_type = ?, line_5_speed = ?, line_5_expected = ?, line_5_actual = ?, line_5_notes = ?,
+        line_6_type = ?, line_6_speed = ?, line_6_expected = ?, line_6_actual = ?, line_6_notes = ?,
+        line_7_type = ?, line_7_speed = ?, line_7_expected = ?, line_7_actual = ?, line_7_notes = ?,
+        line_8_type = ?, line_8_speed = ?, line_8_expected = ?, line_8_actual = ?, line_8_notes = ?
+      WHERE id = ?
+    `);
+    
+    updateReport.run(
+      report_date,
+      created_by || 'Unknown',
+      lines[0]?.type || '', lines[0]?.speed || 0, lines[0]?.expected || 0, lines[0]?.actual || 0, lines[0]?.notes || '',
+      lines[1]?.type || '', lines[1]?.speed || 0, lines[1]?.expected || 0, lines[1]?.actual || 0, lines[1]?.notes || '',
+      lines[2]?.type || '', lines[2]?.speed || 0, lines[2]?.expected || 0, lines[2]?.actual || 0, lines[2]?.notes || '',
+      lines[3]?.type || '', lines[3]?.speed || 0, lines[3]?.expected || 0, lines[3]?.actual || 0, lines[3]?.notes || '',
+      lines[4]?.type || '', lines[4]?.speed || 0, lines[4]?.expected || 0, lines[4]?.actual || 0, lines[4]?.notes || '',
+      lines[5]?.type || '', lines[5]?.speed || 0, lines[5]?.expected || 0, lines[5]?.actual || 0, lines[5]?.notes || '',
+      lines[6]?.type || '', lines[6]?.speed || 0, lines[6]?.expected || 0, lines[6]?.actual || 0, lines[6]?.notes || '',
+      lines[7]?.type || '', lines[7]?.speed || 0, lines[7]?.expected || 0, lines[7]?.actual || 0, lines[7]?.notes || '',
+      req.params.id
+    );
+    
+    const report = db.prepare('SELECT * FROM production_reports WHERE id = ?').get(req.params.id);
+    res.json(report);
+  } catch (error) {
+    console.error('Error updating production report:', error);
+    res.status(500).json({ error: 'Failed to update production report' });
+  }
+});
+
+app.delete('/api/production-reports/:id', (req, res) => {
+  try {
+    db.prepare('DELETE FROM production_reports WHERE id = ?').run(req.params.id);
+    res.json({ message: 'Production report deleted' });
+  } catch (error) {
+    console.error('Error deleting production report:', error);
+    res.status(500).json({ error: 'Failed to delete production report' });
+  }
+});
+
+// Production Analytics
+app.get('/api/analytics/production', (req, res) => {
+  try {
+    const { period = 'daily' } = req.query;
+    
+    let dateFormat;
+    switch (period) {
+      case 'daily':
+        dateFormat = '%Y-%m-%d';
+        break;
+      case 'weekly':
+        dateFormat = '%Y-%W';
+        break;
+      case 'monthly':
+        dateFormat = '%Y-%m';
+        break;
+      default:
+        dateFormat = '%Y-%m-%d';
+    }
+    
+    // Production trends by date
+    const productionTrends = db.prepare(`
+      SELECT strftime('${dateFormat}', report_date) as period,
+             AVG(line_1_actual + line_2_actual + line_3_actual + line_4_actual + 
+                 line_5_actual + line_6_actual + line_7_actual + line_8_actual) as total_actual,
+             AVG(line_1_expected + line_2_expected + line_3_expected + line_4_expected + 
+                 line_5_expected + line_6_expected + line_7_expected + line_8_expected) as total_expected
+      FROM production_reports
+      GROUP BY period
+      ORDER BY period DESC
+      LIMIT 30
+    `).all();
+    
+    // Line efficiency
+    const lineEfficiency = db.prepare(`
+      SELECT 
+        (SUM(line_1_actual) * 1.0 / NULLIF(SUM(line_1_expected), 0) * 100) as line_1_efficiency,
+        (SUM(line_2_actual) * 1.0 / NULLIF(SUM(line_2_expected), 0) * 100) as line_2_efficiency,
+        (SUM(line_3_actual) * 1.0 / NULLIF(SUM(line_3_expected), 0) * 100) as line_3_efficiency,
+        (SUM(line_4_actual) * 1.0 / NULLIF(SUM(line_4_expected), 0) * 100) as line_4_efficiency,
+        (SUM(line_5_actual) * 1.0 / NULLIF(SUM(line_5_expected), 0) * 100) as line_5_efficiency,
+        (SUM(line_6_actual) * 1.0 / NULLIF(SUM(line_6_expected), 0) * 100) as line_6_efficiency,
+        (SUM(line_7_actual) * 1.0 / NULLIF(SUM(line_7_expected), 0) * 100) as line_7_efficiency,
+        (SUM(line_8_actual) * 1.0 / NULLIF(SUM(line_8_expected), 0) * 100) as line_8_efficiency
+      FROM production_reports
+    `).get();
+    
+    // Top production types
+    const topProductionTypes = db.prepare(`
+      SELECT line_1_type as type, SUM(line_1_actual) as total
+      FROM production_reports WHERE line_1_type != ''
+      GROUP BY line_1_type
+      UNION ALL
+      SELECT line_2_type as type, SUM(line_2_actual) as total
+      FROM production_reports WHERE line_2_type != ''
+      GROUP BY line_2_type
+      UNION ALL
+      SELECT line_3_type as type, SUM(line_3_actual) as total
+      FROM production_reports WHERE line_3_type != ''
+      GROUP BY line_3_type
+      UNION ALL
+      SELECT line_4_type as type, SUM(line_4_actual) as total
+      FROM production_reports WHERE line_4_type != ''
+      GROUP BY line_4_type
+      UNION ALL
+      SELECT line_5_type as type, SUM(line_5_actual) as total
+      FROM production_reports WHERE line_5_type != ''
+      GROUP BY line_5_type
+      UNION ALL
+      SELECT line_6_type as type, SUM(line_6_actual) as total
+      FROM production_reports WHERE line_6_type != ''
+      GROUP BY line_6_type
+      UNION ALL
+      SELECT line_7_type as type, SUM(line_7_actual) as total
+      FROM production_reports WHERE line_7_type != ''
+      GROUP BY line_7_type
+      UNION ALL
+      SELECT line_8_type as type, SUM(line_8_actual) as total
+      FROM production_reports WHERE line_8_type != ''
+      GROUP BY line_8_type
+      ORDER BY total DESC
+      LIMIT 10
+    `).all();
+    
+    // Recent reports
+    const recentReports = db.prepare(`
+      SELECT id, report_date, created_by, created_at
+      FROM production_reports
+      ORDER BY report_date DESC, created_at DESC
+      LIMIT 10
+    `).all();
+    
+    res.json({
+      productionTrends: productionTrends.reverse(),
+      lineEfficiency,
+      topProductionTypes,
+      recentReports,
+    });
+  } catch (error) {
+    console.error('Production analytics error:', error);
+    res.status(500).json({ error: 'Failed to fetch production analytics' });
   }
 });
 
