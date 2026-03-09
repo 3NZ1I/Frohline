@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { customersApi } from '../api';
+import { useLanguage } from '../context/LanguageContext';
 
 function Customers() {
+  const { language, t } = useLanguage();
   const [customers, setCustomers] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
@@ -68,34 +70,98 @@ function Customers() {
     }
   };
 
+  // Translations
+  const labels = {
+    en: {
+      title: '👥 Customers',
+      addCustomer: '➕ Add Customer',
+      name: 'Name',
+      company: 'Company',
+      email: 'Email',
+      phone: 'Phone',
+      address: 'Address',
+      actions: 'Actions',
+      noCustomers: 'No customers found',
+      edit: 'Edit',
+      delete: 'Delete',
+      editCustomer: 'Edit Customer',
+      addCustomerModal: 'Add Customer',
+      cancel: 'Cancel',
+      update: 'Update',
+      create: 'Create',
+      confirmDelete: 'Are you sure you want to delete this customer?',
+    },
+    tr: {
+      title: '👥 Müşteriler',
+      addCustomer: '➕ Müşteri Ekle',
+      name: 'Ad',
+      company: 'Şirket',
+      email: 'E-posta',
+      phone: 'Telefon',
+      address: 'Adres',
+      actions: 'İşlemler',
+      noCustomers: 'Müşteri bulunamadı',
+      edit: 'Düzenle',
+      delete: 'Sil',
+      editCustomer: 'Müşteriyi Düzenle',
+      addCustomerModal: 'Müşteri Ekle',
+      cancel: 'İptal',
+      update: 'Güncelle',
+      create: 'Oluştur',
+      confirmDelete: 'Bu müşteriyi silmek istediğinizden emin misiniz?',
+    },
+    ar: {
+      title: '👥 العملاء',
+      addCustomer: '➕ إضافة عميل',
+      name: 'الاسم',
+      company: 'الشركة',
+      email: 'البريد الإلكتروني',
+      phone: 'الهاتف',
+      address: 'العنوان',
+      actions: 'الإجراءات',
+      noCustomers: 'لا يوجد عملاء',
+      edit: 'تعديل',
+      delete: 'حذف',
+      editCustomer: 'تعديل العميل',
+      addCustomerModal: 'إضافة عميل',
+      cancel: 'إلغاء',
+      update: 'تحديث',
+      create: 'إنشاء',
+      confirmDelete: 'هل أنت متأكد أنك تريد حذف هذا العميل؟',
+    },
+  };
+
+  const l = labels[language] || labels.en;
+  const isRTL = language === 'ar';
+
   return (
-    <div>
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2>👥 Customers</h2>
+    <div dir={isRTL ? 'rtl' : 'ltr'}>
+      <div className="d-flex justify-content-between align-items-center mb-4" style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+        <h2>{l.title}</h2>
         <button className="btn btn-primary" onClick={() => handleOpenModal()}>
-          ➕ Add Customer
+          {l.addCustomer}
         </button>
       </div>
 
       <div className="card">
         <div className="card-body">
           <div className="table-responsive">
-            <table className="table table-hover">
+            <table className="table table-hover" dir={isRTL ? 'rtl' : 'ltr'}>
               <thead>
                 <tr>
-                  <th>Name</th>
-                  <th>Company</th>
-                  <th>Email</th>
-                  <th>Phone</th>
-                  <th>Address</th>
-                  <th>Actions</th>
+                  <th>{l.name}</th>
+                  <th>{l.company}</th>
+                  <th>{l.email}</th>
+                  <th>{l.phone}</th>
+                  <th>{l.address}</th>
+                  <th>{l.actions}</th>
                 </tr>
               </thead>
               <tbody>
                 {customers.length === 0 ? (
                   <tr>
                     <td colSpan="6" className="text-center text-muted py-4">
-                      No customers found
+                      {l.noCustomers}
                     </td>
                   </tr>
                 ) : (
@@ -106,18 +172,18 @@ function Customers() {
                       <td>{customer.email || '-'}</td>
                       <td>{customer.phone || '-'}</td>
                       <td>{customer.address || '-'}</td>
-                      <td>
+                      <td dir="ltr">
                         <button
                           className="btn btn-sm btn-outline-primary me-1"
                           onClick={() => handleOpenModal(customer)}
                         >
-                          Edit
+                          {l.edit}
                         </button>
                         <button
                           className="btn btn-sm btn-outline-danger"
                           onClick={() => handleDelete(customer.id)}
                         >
-                          Delete
+                          {l.delete}
                         </button>
                       </td>
                     </tr>
@@ -136,14 +202,14 @@ function Customers() {
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">
-                  {editingCustomer ? 'Edit Customer' : 'Add Customer'}
+                  {editingCustomer ? l.editCustomer : l.addCustomerModal}
                 </h5>
                 <button type="button" className="btn-close" onClick={handleCloseModal}></button>
               </div>
               <form onSubmit={handleSubmit}>
                 <div className="modal-body">
                   <div className="mb-3">
-                    <label className="form-label">Name *</label>
+                    <label className="form-label">{l.name} *</label>
                     <input
                       type="text"
                       className="form-control"
@@ -153,7 +219,7 @@ function Customers() {
                     />
                   </div>
                   <div className="mb-3">
-                    <label className="form-label">Company</label>
+                    <label className="form-label">{l.company}</label>
                     <input
                       type="text"
                       className="form-control"
@@ -162,7 +228,7 @@ function Customers() {
                     />
                   </div>
                   <div className="mb-3">
-                    <label className="form-label">Email</label>
+                    <label className="form-label">{l.email}</label>
                     <input
                       type="email"
                       className="form-control"
@@ -171,7 +237,7 @@ function Customers() {
                     />
                   </div>
                   <div className="mb-3">
-                    <label className="form-label">Phone</label>
+                    <label className="form-label">{l.phone}</label>
                     <input
                       type="text"
                       className="form-control"
@@ -180,7 +246,7 @@ function Customers() {
                     />
                   </div>
                   <div className="mb-3">
-                    <label className="form-label">Address</label>
+                    <label className="form-label">{l.address}</label>
                     <textarea
                       className="form-control"
                       rows="2"
@@ -189,12 +255,12 @@ function Customers() {
                     ></textarea>
                   </div>
                 </div>
-                <div className="modal-footer">
+                <div className="modal-footer" dir="ltr">
                   <button type="button" className="btn btn-secondary" onClick={handleCloseModal}>
-                    Cancel
+                    {l.cancel}
                   </button>
                   <button type="submit" className="btn btn-primary">
-                    {editingCustomer ? 'Update' : 'Create'}
+                    {editingCustomer ? l.update : l.create}
                   </button>
                 </div>
               </form>

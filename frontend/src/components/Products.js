@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { productsApi } from '../api';
+import { useLanguage } from '../context/LanguageContext';
 import * as XLSX from 'xlsx';
 
 function Products() {
+  const { language, t } = useLanguage();
   const [products, setProducts] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
@@ -111,7 +113,7 @@ function Products() {
 
   const handleBulkDelete = async () => {
     if (selectedProducts.size === 0) return;
-    
+
     if (!window.confirm(`Are you sure you want to delete ${selectedProducts.size} products?`)) {
       return;
     }
@@ -131,8 +133,8 @@ function Products() {
   const handleExport = async () => {
     try {
       const response = await productsApi.export();
-      const blob = new Blob([response.data], { 
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+      const blob = new Blob([response.data], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -176,7 +178,7 @@ function Products() {
         console.error('Import errors:', response.data.errors);
         alert(`Imported with ${response.data.errors.length} errors. Check console for details.`);
       }
-      
+
       loadProducts();
       e.target.value = '';
     } catch (error) {
@@ -213,12 +215,127 @@ function Products() {
     }
   };
 
+  // Translations
+  const labels = {
+    en: {
+      title: '📦 Products',
+      addProduct: '➕ Add Product',
+      selected: 'product(s) selected',
+      deleteSelected: '🗑️ Delete Selected',
+      exportSelected: '📊 Export Selected',
+      clearSelection: '✕ Clear Selection',
+      exportAll: '📥 Export All Products',
+      importProducts: '📤 Import Products',
+      importHint: 'Supports XLSX format. Template columns: Name, Description, SKU, Weight, Price, Stock',
+      sku: 'SKU',
+      weight: 'Weight (kg)',
+      price: 'Price',
+      stock: 'Stock',
+      actions: 'Actions',
+      noProducts: 'No products found',
+      edit: 'Edit',
+      delete: 'Delete',
+      editProduct: 'Edit Product',
+      addProductModal: 'Add Product',
+      name: 'Name (TR | EN | AR) *',
+      namePlaceholder: 'Turkish | English | عربي',
+      description: 'Description',
+      stockQty: 'Stock Quantity',
+      cancel: 'Cancel',
+      update: 'Update',
+      create: 'Create',
+      confirmDelete: 'Are you sure you want to delete this product?',
+      confirmBulkDelete: 'Are you sure you want to delete',
+      noDataInFile: 'No data found in file',
+      importConfirm: 'Import',
+      productsQuestion: 'products? This will add them to your existing products.',
+      noProductsSelected: 'No products selected',
+      errorExportSelected: 'Error exporting selected products',
+      errorImport: 'Error importing products:',
+    },
+    tr: {
+      title: '📦 Ürünler',
+      addProduct: '➕ Ürün Ekle',
+      selected: 'ürün seçildi',
+      deleteSelected: '🗑️ Seçilenleri Sil',
+      exportSelected: '📊 Seçilenleri Dışa Aktar',
+      clearSelection: '✕ Seçimi Temizle',
+      exportAll: '📥 Tüm Ürünleri Dışa Aktar',
+      importProducts: '📤 Ürünleri İçe Aktar',
+      importHint: 'XLSX formatı desteklenir. Şablon sütunları: Ad, Açıklama, SKU, Ağırlık, Fiyat, Stok',
+      sku: 'SKU',
+      weight: 'Ağırlık (kg)',
+      price: 'Fiyat',
+      stock: 'Stok',
+      actions: 'İşlemler',
+      noProducts: 'Ürün bulunamadı',
+      edit: 'Düzenle',
+      delete: 'Sil',
+      editProduct: 'Ürünü Düzenle',
+      addProductModal: 'Ürün Ekle',
+      name: 'Ad (TR | EN | AR) *',
+      namePlaceholder: 'Türkçe | English | عربي',
+      description: 'Açıklama',
+      stockQty: 'Stok Miktarı',
+      cancel: 'İptal',
+      update: 'Güncelle',
+      create: 'Oluştur',
+      confirmDelete: 'Bu ürünü silmek istediğinizden emin misiniz?',
+      confirmBulkDelete: 'Şu kadar ürünü silmek istediğinizden emin misiniz:',
+      noDataInFile: 'Dosyada veri bulunamadı',
+      importConfirm: 'İçe aktar',
+      productsQuestion: 'ürün? Bu, mevcut ürünlerinize ekleyecektir.',
+      noProductsSelected: 'Seçili ürün yok',
+      errorExportSelected: 'Seçili ürünler dışa aktarılırken hata oluştu',
+      errorImport: 'Ürünler içe aktarılırken hata:',
+    },
+    ar: {
+      title: '📦 المنتجات',
+      addProduct: '➕ إضافة منتج',
+      selected: 'منتج محدد',
+      deleteSelected: '🗑️ حذف المحدد',
+      exportSelected: '📊 تصدير المحدد',
+      clearSelection: '✕ مسح التحديد',
+      exportAll: '📥 تصدير جميع المنتجات',
+      importProducts: '📤 استيراد منتجات',
+      importHint: 'يدعم تنسيق XLSX. أعمدة القالب: الاسم، الوصف، رمز المنتج، الوزن، السعر، المخزون',
+      sku: 'رمز المنتج',
+      weight: 'الوزن (كجم)',
+      price: 'السعر',
+      stock: 'المخزون',
+      actions: 'الإجراءات',
+      noProducts: 'لا توجد منتجات',
+      edit: 'تعديل',
+      delete: 'حذف',
+      editProduct: 'تعديل المنتج',
+      addProductModal: 'إضافة منتج',
+      name: 'الاسم (TR | EN | AR) *',
+      namePlaceholder: 'Turkish | English | عربي',
+      description: 'الوصف',
+      stockQty: 'كمية المخزون',
+      cancel: 'إلغاء',
+      update: 'تحديث',
+      create: 'إنشاء',
+      confirmDelete: 'هل أنت متأكد أنك تريد حذف هذا المنتج؟',
+      confirmBulkDelete: 'هل أنت متأكد أنك تريد حذف',
+      noDataInFile: 'لم يتم العثور على بيانات في الملف',
+      importConfirm: 'استيراد',
+      productsQuestion: 'منتج؟ سيتم إضافتها إلى منتجاتك الحالية.',
+      noProductsSelected: 'لم يتم تحديد منتجات',
+      errorExportSelected: 'خطأ في تصدير المنتجات المحددة',
+      errorImport: 'خطأ في استيراد المنتجات:',
+    },
+  };
+
+  const l = labels[language] || labels.en;
+  const isRTL = language === 'ar';
+
   return (
-    <div>
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2>📦 Products</h2>
+    <div dir={isRTL ? 'rtl' : 'ltr'}>
+      <div className="d-flex justify-content-between align-items-center mb-4" style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+        <h2>{l.title}</h2>
         <button className="btn btn-primary" onClick={() => handleOpenModal()}>
-          ➕ Add Product
+          {l.addProduct}
         </button>
       </div>
 
@@ -226,31 +343,31 @@ function Products() {
       {selectedProducts.size > 0 && (
         <div className="card mb-3 bg-light">
           <div className="card-body py-2">
-            <div className="d-flex justify-content-between align-items-center">
+            <div className="d-flex justify-content-between align-items-center" dir={isRTL ? 'rtl' : 'ltr'}>
               <span className="fw-semibold">
-                {selectedProducts.size} product(s) selected
+                {selectedProducts.size} {l.selected}
               </span>
-              <div className="btn-group" role="group">
-                <button 
+              <div className="btn-group" role="group" dir="ltr">
+                <button
                   className="btn btn-sm btn-outline-danger"
                   onClick={handleBulkDelete}
                 >
-                  🗑️ Delete Selected
+                  {l.deleteSelected}
                 </button>
-                <button 
+                <button
                   className="btn btn-sm btn-outline-success"
                   onClick={handleExportSelected}
                 >
-                  📊 Export Selected
+                  {l.exportSelected}
                 </button>
-                <button 
+                <button
                   className="btn btn-sm btn-outline-secondary"
                   onClick={() => {
                     setSelectedProducts(new Set());
                     setSelectAll(false);
                   }}
                 >
-                  ✕ Clear Selection
+                  {l.clearSelection}
                 </button>
               </div>
             </div>
@@ -261,12 +378,12 @@ function Products() {
       {/* Import/Export Actions */}
       <div className="card mb-3">
         <div className="card-body py-2">
-          <div className="d-flex gap-2">
+          <div className="d-flex gap-2" dir={isRTL ? 'rtl' : 'ltr'}>
             <button className="btn btn-sm btn-outline-success" onClick={handleExport}>
-              📥 Export All Products
+              {l.exportAll}
             </button>
             <button className="btn btn-sm btn-outline-primary" onClick={handleImportClick}>
-              📤 Import Products
+              {l.importProducts}
             </button>
             <input
               type="file"
@@ -276,7 +393,7 @@ function Products() {
               style={{ display: 'none' }}
             />
             <small className="text-muted align-self-center">
-              Supports XLSX format. Template columns: Name, Description, SKU, Weight, Price, Stock
+              {l.importHint}
             </small>
           </div>
         </div>
@@ -285,7 +402,7 @@ function Products() {
       <div className="card">
         <div className="card-body">
           <div className="table-responsive">
-            <table className="table table-hover">
+            <table className="table table-hover" dir={isRTL ? 'rtl' : 'ltr'}>
               <thead>
                 <tr>
                   <th style={{ width: '40px' }}>
@@ -296,24 +413,24 @@ function Products() {
                       onChange={toggleSelectAll}
                     />
                   </th>
-                  <th>Name (TR | EN | AR)</th>
-                  <th>SKU</th>
-                  <th>Weight (kg)</th>
-                  <th>Price</th>
-                  <th>Stock</th>
-                  <th>Actions</th>
+                  <th>{l.name.split(' *')[0]}</th>
+                  <th>{l.sku}</th>
+                  <th>{l.weight}</th>
+                  <th>{l.price}</th>
+                  <th>{l.stock}</th>
+                  <th>{l.actions}</th>
                 </tr>
               </thead>
               <tbody>
                 {products.length === 0 ? (
                   <tr>
                     <td colSpan="7" className="text-center text-muted py-4">
-                      No products found
+                      {l.noProducts}
                     </td>
                   </tr>
                 ) : (
                   products.map(product => (
-                    <tr key={product.id} style={{ direction: 'ltr' }}>
+                    <tr key={product.id} dir="ltr">
                       <td>
                         <input
                           type="checkbox"
@@ -341,18 +458,18 @@ function Products() {
                           {product.stock}
                         </span>
                       </td>
-                      <td>
+                      <td dir="ltr">
                         <button
                           className="btn btn-sm btn-outline-primary me-1"
                           onClick={() => handleOpenModal(product)}
                         >
-                          Edit
+                          {l.edit}
                         </button>
                         <button
                           className="btn btn-sm btn-outline-danger"
                           onClick={() => handleDelete(product.id)}
                         >
-                          Delete
+                          {l.delete}
                         </button>
                       </td>
                     </tr>
@@ -371,25 +488,25 @@ function Products() {
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">
-                  {editingProduct ? 'Edit Product' : 'Add Product'}
+                  {editingProduct ? l.editProduct : l.addProductModal}
                 </h5>
                 <button type="button" className="btn-close" onClick={handleCloseModal}></button>
               </div>
               <form onSubmit={handleSubmit}>
                 <div className="modal-body">
                   <div className="mb-3">
-                    <label className="form-label">Name (TR | EN | AR) *</label>
+                    <label className="form-label">{l.name}</label>
                     <input
                       type="text"
                       className="form-control"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       required
-                      placeholder="Turkish | English | عربي"
+                      placeholder={l.namePlaceholder}
                     />
                   </div>
                   <div className="mb-3">
-                    <label className="form-label">Description</label>
+                    <label className="form-label">{l.description}</label>
                     <textarea
                       className="form-control"
                       rows="2"
@@ -399,7 +516,7 @@ function Products() {
                   </div>
                   <div className="row">
                     <div className="col-md-4 mb-3">
-                      <label className="form-label">SKU</label>
+                      <label className="form-label">{l.sku}</label>
                       <input
                         type="text"
                         className="form-control"
@@ -408,7 +525,7 @@ function Products() {
                       />
                     </div>
                     <div className="col-md-4 mb-3">
-                      <label className="form-label">Weight (kg)</label>
+                      <label className="form-label">{l.weight}</label>
                       <input
                         type="number"
                         step="0.01"
@@ -419,7 +536,7 @@ function Products() {
                       />
                     </div>
                     <div className="col-md-4 mb-3">
-                      <label className="form-label">Price ($)</label>
+                      <label className="form-label">{l.price} ($)</label>
                       <input
                         type="number"
                         step="0.01"
@@ -432,7 +549,7 @@ function Products() {
                   </div>
                   <div className="row">
                     <div className="col-md-6 mb-3">
-                      <label className="form-label">Stock Quantity</label>
+                      <label className="form-label">{l.stockQty}</label>
                       <input
                         type="number"
                         min="0"
@@ -443,12 +560,12 @@ function Products() {
                     </div>
                   </div>
                 </div>
-                <div className="modal-footer">
+                <div className="modal-footer" dir="ltr">
                   <button type="button" className="btn btn-secondary" onClick={handleCloseModal}>
-                    Cancel
+                    {l.cancel}
                   </button>
                   <button type="submit" className="btn btn-primary">
-                    {editingProduct ? 'Update' : 'Create'}
+                    {editingProduct ? l.update : l.create}
                   </button>
                 </div>
               </form>
