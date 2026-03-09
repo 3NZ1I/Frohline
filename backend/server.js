@@ -3,7 +3,6 @@ const cors = require('cors');
 const Database = require('better-sqlite3');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
-const XLSX = require('xlsx');
 const fs = require('fs');
 
 const app = express();
@@ -390,8 +389,15 @@ app.post('/api/products/bulk-delete', (req, res) => {
 
 app.get('/api/products/export', (req, res) => {
   try {
-    const products = db.prepare('SELECT * FROM products ORDER BY name').all();
+    let XLSX;
+    try {
+      XLSX = require('xlsx');
+    } catch (e) {
+      return res.status(500).json({ error: 'XLSX library not available. Please install xlsx package.' });
+    }
     
+    const products = db.prepare('SELECT * FROM products ORDER BY name').all();
+
     const data = products.map(p => ({
       'Name (TR | EN | AR)': p.name,
       'Description': p.description || '',
@@ -400,13 +406,13 @@ app.get('/api/products/export', (req, res) => {
       'Price': p.price || 0,
       'Stock': p.stock || 0,
     }));
-    
+
     const worksheet = XLSX.utils.json_to_sheet(data);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Products');
-    
+
     const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
-    
+
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', 'attachment; filename="products.xlsx"');
     res.send(buffer);
