@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useLanguage } from '../context/LanguageContext';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 const API = axios.create({
   baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000/api',
@@ -13,6 +15,10 @@ function ProductionDetails() {
   const [reports, setReports] = useState([]);
   const [reportDate, setReportDate] = useState(new Date().toISOString().split('T')[0]);
   const [createdBy, setCreatedBy] = useState('');
+  const [filterPeriod, setFilterPeriod] = useState('all'); // all, weekly, monthly, annual
+  const [selectedReports, setSelectedReports] = useState(new Set());
+  const [selectAll, setSelectAll] = useState(false);
+  const reportsContainerRef = React.useRef(null);
   
   // 8 production lines
   const [lines, setLines] = useState([
@@ -32,8 +38,24 @@ function ProductionDetails() {
 
   const loadReports = async () => {
     try {
-      const response = await API.get('/production-reports', { params: { limit: 50 } });
-      setReports(response.data);
+      const response = await API.get('/production-reports', { params: { limit: 500 } });
+      let allReports = response.data;
+      
+      // Filter by period
+      const now = new Date();
+      const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const oneYearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+      
+      if (filterPeriod === 'weekly') {
+        allReports = allReports.filter(r => new Date(r.report_date) >= oneWeekAgo);
+      } else if (filterPeriod === 'monthly') {
+        allReports = allReports.filter(r => new Date(r.report_date) >= oneMonthAgo);
+      } else if (filterPeriod === 'annual') {
+        allReports = allReports.filter(r => new Date(r.report_date) >= oneYearAgo);
+      }
+      
+      setReports(allReports);
     } catch (error) {
       console.error('Error loading reports:', error);
     }
@@ -110,6 +132,86 @@ function ProductionDetails() {
     }
   };
 
+  // Multi-select handlers
+  const toggleSelectReport = (id) => {
+    const newSelected = new Set(selectedReports);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedReports(newSelected);
+    setSelectAll(newSelected.size === reports.length);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectAll) {
+      setSelectedReports(new Set());
+      setSelectAll(false);
+    } else {
+      setSelectedReports(new Set(reports.map(r => r.id)));
+      setSelectAll(true);
+    }
+  };
+
+  // Export selected reports to PDF
+  const handleExportPDF = async () => {
+    if (selectedReports.size === 0) {
+      alert('Please select at least one report to export');
+      return;
+    }
+
+    const element = reportsContainerRef.current;
+    if (!element) return;
+
+    const pdfLabels = {
+      en: 'Production_Report',
+      tr: 'Uretim_Raporu',
+      ar: 'تقرير_الإنتاج',
+    };
+
+    const fileName = `${pdfLabels[language] || 'Production_Report'}_${new Date().toISOString().split('T')[0]}.pdf`;
+
+    try {
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        windowWidth: 1920,
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4',
+      });
+
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = pdfWidth - 20;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      let heightLeft = imgHeight;
+      let position = 10;
+
+      pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+      heightLeft -= pdfHeight - 20;
+
+      while (heightLeft > 0) {
+        pdf.addPage();
+        position = heightLeft - imgHeight;
+        pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+        heightLeft -= pdfHeight - 20;
+      }
+
+      pdf.save(fileName);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Error generating PDF');
+    }
+  };
+
   // Translations
   const labels = {
     en: {
@@ -134,6 +236,15 @@ function ProductionDetails() {
       totalActual: 'Total Actual',
       totalDifference: 'Total Difference',
       efficiency: 'Efficiency',
+      filter: 'Filter',
+      all: 'All',
+      weekly: 'Weekly',
+      monthly: 'Monthly',
+      annual: 'Annual',
+      selectAll: 'Select All',
+      exportPDF: '📄 Export Selected as PDF',
+      date: 'Date',
+      reports: 'Reports',
     },
     tr: {
       title: '🏭 Üretim Detayları',
@@ -157,6 +268,15 @@ function ProductionDetails() {
       totalActual: 'Toplam Gerçekleşen',
       totalDifference: 'Toplam Fark',
       efficiency: 'Verimlilik',
+      filter: 'Filtre',
+      all: 'Tümü',
+      weekly: 'Haftalık',
+      monthly: 'Aylık',
+      annual: 'Yıllık',
+      selectAll: 'Tümünü Seç',
+      exportPDF: '📄 Seçilenleri PDF Olarak Dışa Aktar',
+      date: 'Tarih',
+      reports: 'Raporlar',
     },
     ar: {
       title: '🏭 تفاصيل الإنتاج',
@@ -180,6 +300,15 @@ function ProductionDetails() {
       totalActual: 'إجمالي الفعلي',
       totalDifference: 'إجمالي الفرق',
       efficiency: 'الكفاءة',
+      filter: 'تصفية',
+      all: 'الكل',
+      weekly: 'أسبوعي',
+      monthly: 'شهري',
+      annual: 'سنوي',
+      selectAll: 'تحديد الكل',
+      exportPDF: '📄 تصدير المحدد كـ PDF',
+      date: 'التاريخ',
+      reports: 'التقارير',
     },
   };
 
@@ -373,66 +502,119 @@ function ProductionDetails() {
         </form>
       ) : (
         /* Reports List */
-        <div className="card">
-          <div className="card-body">
-            <div className="table-responsive">
-              <table className="table table-hover" dir={isRTL ? 'rtl' : 'ltr'}>
-                <thead>
-                  <tr>
-                    <th>{l.reportDate}</th>
-                    <th>{l.createdBy}</th>
-                    <th>{l.totalExpected}</th>
-                    <th>{l.totalActual}</th>
-                    <th>{l.difference}</th>
-                    <th>{l.actions || 'Actions'}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {reports.length === 0 ? (
-                    <tr>
-                      <td colSpan="6" className="text-center text-muted py-4">
-                        {l.noReports}
-                      </td>
-                    </tr>
-                  ) : (
-                    reports.map((report) => {
-                      const reportTotalExpected = 
-                        report.line_1_expected + report.line_2_expected + report.line_3_expected + report.line_4_expected +
-                        report.line_5_expected + report.line_6_expected + report.line_7_expected + report.line_8_expected;
-                      const reportTotalActual = 
-                        report.line_1_actual + report.line_2_actual + report.line_3_actual + report.line_4_actual +
-                        report.line_5_actual + report.line_6_actual + report.line_7_actual + report.line_8_actual;
-                      const reportDifference = reportTotalActual - reportTotalExpected;
+        <div ref={reportsContainerRef}>
+          <div className="card">
+            <div className="card-body">
+              {/* Filter and Actions Toolbar */}
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <div className="btn-group" role="group" dir="ltr">
+                  <button
+                    className={`btn btn-sm ${filterPeriod === 'all' ? 'btn-primary' : 'btn-outline-primary'}`}
+                    onClick={() => setFilterPeriod('all')}
+                  >
+                    {l.all}
+                  </button>
+                  <button
+                    className={`btn btn-sm ${filterPeriod === 'weekly' ? 'btn-primary' : 'btn-outline-primary'}`}
+                    onClick={() => setFilterPeriod('weekly')}
+                  >
+                    {l.weekly}
+                  </button>
+                  <button
+                    className={`btn btn-sm ${filterPeriod === 'monthly' ? 'btn-primary' : 'btn-outline-primary'}`}
+                    onClick={() => setFilterPeriod('monthly')}
+                  >
+                    {l.monthly}
+                  </button>
+                  <button
+                    className={`btn btn-sm ${filterPeriod === 'annual' ? 'btn-primary' : 'btn-outline-primary'}`}
+                    onClick={() => setFilterPeriod('annual')}
+                  >
+                    {l.annual}
+                  </button>
+                </div>
+                {selectedReports.size > 0 && (
+                  <button className="btn btn-sm btn-success" onClick={handleExportPDF}>
+                    {l.exportPDF} ({selectedReports.size})
+                  </button>
+                )}
+              </div>
 
-                      return (
-                        <tr key={report.id}>
-                          <td>{new Date(report.report_date).toLocaleDateString()}</td>
-                          <td>{report.created_by}</td>
-                          <td>{reportTotalExpected.toFixed(1)} m</td>
-                          <td>{reportTotalActual.toFixed(1)} m</td>
-                          <td className={reportDifference >= 0 ? 'text-success' : 'text-danger'}>
-                            {reportDifference >= 0 ? '+' : ''}{reportDifference.toFixed(1)} m
-                          </td>
-                          <td dir="ltr">
-                            <button
-                              className="btn btn-sm btn-outline-primary me-1"
-                              onClick={() => handleViewReport(report.id)}
-                            >
-                              {l.view}
-                            </button>
-                            <button
-                              className="btn btn-sm btn-outline-danger"
-                              onClick={() => handleDelete(report.id)}
-                            >
-                              {l.delete}
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
+              <div className="table-responsive">
+                <table className="table table-hover" dir={isRTL ? 'rtl' : 'ltr'}>
+                  <thead>
+                    <tr>
+                      <th style={{ width: '40px' }}>
+                        <input
+                          type="checkbox"
+                          className="form-check-input"
+                          checked={selectAll}
+                          onChange={toggleSelectAll}
+                        />
+                      </th>
+                      <th>{l.date}</th>
+                      <th>{l.createdBy}</th>
+                      <th>{l.totalExpected}</th>
+                      <th>{l.totalActual}</th>
+                      <th>{l.difference}</th>
+                      <th>{l.actions || 'Actions'}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reports.length === 0 ? (
+                      <tr>
+                        <td colSpan="7" className="text-center text-muted py-4">
+                          {l.noReports}
+                        </td>
+                      </tr>
+                    ) : (
+                      reports.map((report) => {
+                        const reportTotalExpected = 
+                          report.line_1_expected + report.line_2_expected + report.line_3_expected + report.line_4_expected +
+                          report.line_5_expected + report.line_6_expected + report.line_7_expected + report.line_8_expected;
+                        const reportTotalActual = 
+                          report.line_1_actual + report.line_2_actual + report.line_3_actual + report.line_4_actual +
+                          report.line_5_actual + report.line_6_actual + report.line_7_actual + report.line_8_actual;
+                        const reportDifference = reportTotalActual - reportTotalExpected;
+
+                        return (
+                          <tr key={report.id}>
+                            <td>
+                              <input
+                                type="checkbox"
+                                className="form-check-input"
+                                checked={selectedReports.has(report.id)}
+                                onChange={() => toggleSelectReport(report.id)}
+                              />
+                            </td>
+                            <td>{new Date(report.report_date).toLocaleDateString()}</td>
+                            <td>{report.created_by}</td>
+                            <td>{reportTotalExpected.toFixed(1)} m</td>
+                            <td>{reportTotalActual.toFixed(1)} m</td>
+                            <td className={reportDifference >= 0 ? 'text-success' : 'text-danger'}>
+                              {reportDifference >= 0 ? '+' : ''}{reportDifference.toFixed(1)} m
+                            </td>
+                            <td dir="ltr">
+                              <button
+                                className="btn btn-sm btn-outline-primary me-1"
+                                onClick={() => handleViewReport(report.id)}
+                              >
+                                {l.view}
+                              </button>
+                              <button
+                                className="btn btn-sm btn-outline-danger"
+                                onClick={() => handleDelete(report.id)}
+                              >
+                                {l.delete}
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
