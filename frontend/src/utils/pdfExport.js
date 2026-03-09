@@ -1,5 +1,5 @@
 // Enhanced PDF Export with sub-brand logo and proper colors
-// Note: Turkish characters are transliterated for PDF compatibility
+// Note: Turkish and Arabic characters are transliterated for PDF compatibility
 import { subBrands } from '../data/subBrands';
 
 // Turkish character mapping for PDF compatibility
@@ -20,13 +20,72 @@ function transliterateTurkish(text) {
     .replace(/ç/g, 'c');
 }
 
+// Arabic character mapping for PDF compatibility (transliterate to English)
+function transliterateArabic(text) {
+  if (!text) return '';
+  return text
+    .replace(/العميل/g, 'Customer')
+    .replace(/الشركة/g, 'Company')
+    .replace(/العلامة التجارية/g, 'Brand')
+    .replace(/التاريخ/g, 'Date')
+    .replace(/الحالة/g, 'Status')
+    .replace(/اسم المنتج/g, 'Product')
+    .replace(/رمز المنتج/g, 'SKU')
+    .replace(/الكمية/g, 'Qty')
+    .replace(/الوزن/g, 'Weight')
+    .replace(/السعر/g, 'Price')
+    .replace(/المجموع الجزئي/g, 'Subtotal')
+    .replace(/إجمالي الكمية/g, 'Total Qty')
+    .replace(/إجمالي الوزن/g, 'Total Weight')
+    .replace(/إجمالي المبلغ/g, 'Total Amount')
+    .replace(/ملاحظات/g, 'Notes')
+    .replace(/نموذج الطلب/g, 'Order Form')
+    .replace(/مع_الأسعار/g, 'with_prices')
+    .replace(/بدون_أسعار/g, 'without_prices')
+    .replace(/م/g, 'm')
+    .replace(/أ/g, 'a')
+    .replace(/إ/g, 'i')
+    .replace(/آ/g, 'a')
+    .replace(/ا/g, 'a')
+    .replace(/ب/g, 'b')
+    .replace(/ت/g, 't')
+    .replace(/ث/g, 'th')
+    .replace(/ج/g, 'j')
+    .replace(/ح/g, 'h')
+    .replace(/خ/g, 'kh')
+    .replace(/د/g, 'd')
+    .replace(/ذ/g, 'dh')
+    .replace(/ر/g, 'r')
+    .replace(/ز/g, 'z')
+    .replace(/س/g, 's')
+    .replace(/ش/g, 'sh')
+    .replace(/ص/g, 's')
+    .replace(/ض/g, 'd')
+    .replace(/ط/g, 't')
+    .replace(/ظ/g, 'z')
+    .replace(/ع/g, 'a')
+    .replace(/غ/g, 'gh')
+    .replace(/ف/g, 'f')
+    .replace(/ق/g, 'q')
+    .replace(/ك/g, 'k')
+    .replace(/ل/g, 'l')
+    .replace(/م/g, 'm')
+    .replace(/ن/g, 'n')
+    .replace(/ه/g, 'h')
+    .replace(/و/g, 'w')
+    .replace(/ي/g, 'y')
+    .replace(/ى/g, 'a')
+    .replace(/ة/g, 'h')
+    .replace(/_/g, ' ');
+}
+
 export async function exportOrderAsPDF(order, customer, brandName, includePrices, language) {
   const jsPDF = (await import('jspdf')).default;
   
   const pdfLabels = {
     en: { title: 'Order Form', customer: 'Customer', company: 'Company', brand: 'Brand', date: 'Date', status: 'Status', product: 'Product', sku: 'SKU', qty: 'Qty', weight: 'Weight (m)', price: 'Price', subtotal: 'Subtotal', totalQty: 'Total Qty', totalWeight: 'Total Weight', totalAmount: 'Total Amount', notes: 'Notes', withPrices: 'with_prices', withoutPrices: 'without_prices' },
     tr: { title: 'Siparis Formu', customer: 'Musteri', company: 'Sirket', brand: 'Marka', date: 'Tarih', status: 'Durum', product: 'Urun', sku: 'SKU', qty: 'Adet', weight: 'Agirlik (m)', price: 'Fiyat', subtotal: 'Ara Toplam', totalQty: 'Toplam Adet', totalWeight: 'Toplam Agirlik', totalAmount: 'Toplam Tutar', notes: 'Notlar', withPrices: 'fiyatli', withoutPrices: 'fiyatsiz' },
-    ar: { title: 'نموذج الطلب', customer: 'العميل', company: 'الشركة', brand: 'العلامة التجارية', date: 'التاريخ', status: 'الحالة', product: 'اسم المنتج', sku: 'رمز المنتج', qty: 'الكمية', weight: 'الوزن (م)', price: 'السعر', subtotal: 'المجموع الجزئي', totalQty: 'إجمالي الكمية', totalWeight: 'إجمالي الوزن', totalAmount: 'إجمالي المبلغ', notes: 'ملاحظات', withPrices: 'مع_الأسعار', withoutPrices: 'بدون_أسعار' },
+    ar: { title: 'Order Form', customer: 'Customer', company: 'Company', brand: 'Brand', date: 'Date', status: 'Status', product: 'Product', sku: 'SKU', qty: 'Qty', weight: 'Weight (m)', price: 'Price', subtotal: 'Subtotal', totalQty: 'Total Qty', totalWeight: 'Total Weight', totalAmount: 'Total Amount', notes: 'Notes', withPrices: 'with_prices', withoutPrices: 'without_prices' },
   };
 
   const l = pdfLabels[language] || pdfLabels.en;
@@ -82,10 +141,24 @@ export async function exportOrderAsPDF(order, customer, brandName, includePrices
   pdf.setFontSize(9);
   pdf.setFont('helvetica', 'normal');
   
-  const customerName = transliterateTurkish(customer?.name || '-');
-  const companyName = transliterateTurkish(customer?.company || '');
-  const brandLabel = transliterateTurkish(brandName);
-  const notesText = transliterateTurkish(order.notes || '');
+  // Transliterate text based on language
+  let customerName, companyName, brandLabel, notesText;
+  if (language === 'ar') {
+    customerName = transliterateArabic(customer?.name || '-');
+    companyName = transliterateArabic(customer?.company || '');
+    brandLabel = transliterateArabic(brandName);
+    notesText = transliterateArabic(order.notes || '');
+  } else if (language === 'tr') {
+    customerName = transliterateTurkish(customer?.name || '-');
+    companyName = transliterateTurkish(customer?.company || '');
+    brandLabel = transliterateTurkish(brandName);
+    notesText = transliterateTurkish(order.notes || '');
+  } else {
+    customerName = customer?.name || '-';
+    companyName = customer?.company || '';
+    brandLabel = brandName;
+    notesText = order.notes || '';
+  }
   
   pdf.setFont('helvetica', 'bold');
   pdf.text(`${l.customer}:`, margin, yPos + 3);
@@ -189,8 +262,16 @@ export async function exportOrderAsPDF(order, customer, brandName, includePrices
     pdf.text((index + 1).toString(), xPos + colWidths[0] / 2, yPos + 5, { align: 'center' });
     xPos += colWidths[0];
     
-    // Product name with text wrapping - transliterate Turkish chars
-    const productName = transliterateTurkish(item.product_name.split('|')[0]?.trim() || '');
+    // Product name with text wrapping - transliterate based on language
+    let productName;
+    if (language === 'ar') {
+      productName = transliterateArabic(item.product_name.split('|')[0]?.trim() || '');
+    } else if (language === 'tr') {
+      productName = transliterateTurkish(item.product_name.split('|')[0]?.trim() || '');
+    } else {
+      productName = item.product_name.split('|')[0]?.trim() || '';
+    }
+    
     const maxProductName = colWidths[1] - 2;
     const splitName = pdf.splitTextToSize(productName, maxProductName);
     pdf.text(splitName, xPos + 1, yPos + 3);
@@ -248,7 +329,7 @@ export async function exportOrderAsPDF(order, customer, brandName, includePrices
   yPos += 21;
 
   // Notes section - Very light yellow
-  if (order.notes) {
+  if (order.notes && notesText.trim()) {
     pdf.setFont('helvetica', 'bold');
     pdf.text(`${l.notes}:`, margin, yPos);
     yPos += 5;
