@@ -91,7 +91,7 @@ export function exportOrderToXLSX(orderData, items, customer, brandName, languag
     const weight = item.weight || item.product_weight || 0;
     return sum + (weight * item.quantity);
   }, 0);
-  const totalAmount = items.reduce((sum, item) => sum + item.subtotal, 0);
+  const totalAmount = items.reduce((sum, item) => sum + (item.subtotal || 0), 0);
 
   // Create workbook
   const workbook = XLSX.utils.book_new();

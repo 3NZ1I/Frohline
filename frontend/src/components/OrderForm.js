@@ -58,12 +58,17 @@ function OrderForm() {
     try {
       const response = await ordersApi.getById(id);
       const order = response.data;
+      // Map items to include weight from product_weight
+      const itemsWithWeight = (order.items || []).map(item => ({
+        ...item,
+        weight: item.weight || item.product_weight || 0,
+      }));
       setFormData({
         customer_id: order.customer_id,
         sub_brand_id: order.sub_brand_id || '',
         status: order.status,
         notes: order.notes || '',
-        items: order.items || [],
+        items: itemsWithWeight,
       });
     } catch (error) {
       console.error('Error loading order:', error);
@@ -282,7 +287,7 @@ function OrderForm() {
                             />
                           </td>
                           <td>
-                            <small>{(item.weight * item.quantity).toFixed(2)} kg</small>
+                            <small>{((item.weight || 0) * item.quantity).toFixed(2)} kg</small>
                           </td>
                           <td>
                             <input
