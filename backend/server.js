@@ -510,6 +510,163 @@ app.delete('/api/orders/:id', (req, res) => {
   res.json({ message: 'Order deleted' });
 });
 
+// ==================== Analytics API ====================
+
+app.get('/api/analytics/overview', (req, res) => {
+  try {
+    const totalOrders = db.prepare('SELECT COUNT(*) as count FROM orders').get().count;
+    const totalRevenue = db.prepare('SELECT COALESCE(SUM(total_amount), 0) as sum FROM orders').get().sum;
+    const totalProducts = db.prepare('SELECT COUNT(*) as count FROM products').get().count;
+    const totalCustomers = db.prepare('SELECT COUNT(*) as count FROM customers').get().count;
+    
+    const ordersByStatus = db.prepare(`
+      SELECT status, COUNT(*) as count, SUM(total_amount) as revenue
+      FROM orders
+      GROUP BY status
+    `).all();
+    
+    const recentOrders = db.prepare(`
+      SELECT id, customer_name, total_amount, status, created_at
+      FROM orders
+      ORDER BY created_at DESC
+      LIMIT 10
+    `).all();
+    
+    res.json({
+      totalOrders,
+      totalRevenue,
+      totalProducts,
+      totalCustomers,
+      ordersByStatus,
+      recentOrders,
+    });
+  } catch (error) {
+    console.error('Analytics overview error:', error);
+    res.status(500).json({ error: 'Failed to fetch analytics' });
+  }
+});
+
+app.get('/api/analytics/products', (req, res) => {
+  try {
+    // Top products by quantity sold
+    const topProductsByQty = db.prepare(`
+      SELECT p.name, p.sku, SUM(oi.quantity) as total_qty, COUNT(DISTINCT oi.order_id) as order_count
+      FROM order_items oi
+      JOIN products p ON oi.product_id = p.id
+      GROUP BY oi.product_id
+      ORDER BY total_qty DESC
+      LIMIT 10
+    `).all();
+    
+    // Top products by revenue
+    const topProductsByRevenue = db.prepare(`
+      SELECT p.name, p.sku, SUM(oi.subtotal) as total_revenue, SUM(oi.quantity) as qty_sold
+      FROM order_items oi
+      JOIN products p ON oi.product_id = p.id
+      GROUP BY oi.product_id
+      ORDER BY total_revenue DESC
+      LIMIT 10
+    `).all();
+    
+    // Low stock products
+    const lowStock = db.prepare(`
+      SELECT name, sku, stock, price
+      FROM products
+      WHERE stock < 100
+      ORDER BY stock ASC
+      LIMIT 10
+    `).all();
+    
+    res.json({
+      topProductsByQty,
+      topProductsByRevenue,
+      lowStock,
+    });
+  } catch (error) {
+    console.error('Product analytics error:', error);
+    res.status(500).json({ error: 'Failed to fetch product analytics' });
+  }
+});
+
+app.get('/api/analytics/brands', (req, res) => {
+  try {
+    const salesByBrand = db.prepare(`
+      SELECT sub_brand_id, COUNT(*) as order_count, SUM(total_amount) as total_revenue
+      FROM orders
+      WHERE sub_brand_id IS NOT NULL
+      GROUP BY sub_brand_id
+      ORDER BY total_revenue DESC
+    `).all();
+    
+    res.json({
+      salesByBrand,
+    });
+  } catch (error) {
+    console.error('Brand analytics error:', error);
+    res.status(500).json({ error: 'Failed to fetch brand analytics' });
+  }
+});
+
+app.get('/api/analytics/customers', (req, res) => {
+  try {
+    const topCustomers = db.prepare(`
+      SELECT c.name, c.company, COUNT(o.id) as order_count, SUM(o.total_amount) as total_spent
+      FROM customers c
+      LEFT JOIN orders o ON c.id = o.customer_id
+      GROUP BY c.id
+      HAVING order_count > 0
+      ORDER BY total_spent DESC
+      LIMIT 10
+    `).all();
+    
+    res.json({
+      topCustomers,
+    });
+  } catch (error) {
+    console.error('Customer analytics error:', error);
+    res.status(500).json({ error: 'Failed to fetch customer analytics' });
+  }
+});
+
+app.get('/api/analytics/trends', (req, res) => {
+  try {
+    const { period = 'daily' } = req.query;
+    
+    let dateFormat;
+    switch (period) {
+      case 'daily':
+        dateFormat = '%Y-%m-%d';
+        break;
+      case 'weekly':
+        dateFormat = '%Y-%W';
+        break;
+      case 'monthly':
+        dateFormat = '%Y-%m';
+        break;
+      default:
+        dateFormat = '%Y-%m-%d';
+    }
+    
+    const orderTrends = db.prepare(`
+      SELECT strftime('${dateFormat}', created_at) as period,
+             COUNT(*) as order_count,
+             SUM(total_amount) as revenue
+      FROM orders
+      GROUP BY period
+      ORDER BY period DESC
+      LIMIT 30
+    `).all();
+    
+    res.json({
+      period,
+      orderTrends: orderTrends.reverse(), // Reverse to show oldest first for charts
+    });
+  } catch (error) {
+    console.error('Trends analytics error:', error);
+    res.status(500).json({ error: 'Failed to fetch trends' });
+  }
+});
+
 // Start server
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on http://localhost:${PORT}`);

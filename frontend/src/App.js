@@ -5,6 +5,7 @@ import OrdersList from './components/OrdersList';
 import OrderForm from './components/OrderForm';
 import Customers from './components/Customers';
 import Products from './components/Products';
+import Analytics from './components/Analytics';
 
 function Sidebar() {
   const location = useLocation();
@@ -77,6 +78,17 @@ function Sidebar() {
         >
           <span className="me-2">📦</span>
           <span>{t('products')}</span>
+        </Link>
+
+        <Link
+          className={`nav-link rounded mb-2 d-flex align-items-center ${
+            location.pathname === '/analytics' ? 'active bg-danger' : 'text-white'
+          }`}
+          to="/analytics"
+          style={{ padding: '12px 15px', transition: 'all 0.2s' }}
+        >
+          <span className="me-2">📊</span>
+          <span>Analytics</span>
         </Link>
       </nav>
 
@@ -168,6 +180,7 @@ function App() {
             <Route path="/orders/edit/:id" element={<OrderForm />} />
             <Route path="/customers" element={<Customers />} />
             <Route path="/products" element={<Products />} />
+            <Route path="/analytics" element={<Analytics />} />
           </Routes>
         </div>
       </div>
