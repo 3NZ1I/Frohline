@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # Cloudflare Tunnel Startup Script for Frohline OMS
-# Tunnel ID: 90137fe9-7a2d-4159-a433-d1fdef193f83
 # Domain: bessar.work
 
 echo "🚀 Starting Cloudflare Tunnel for Frohline OMS..."
@@ -13,12 +12,22 @@ if ! command -v cloudflared &> /dev/null; then
 fi
 
 # Check if credentials exist
-if [ ! -f ~/.cloudflared/cert.pem ] && [ ! -f ~/.cloudflared/90137fe9-7a2d-4159-a433-d1fdef193f83.json ]; then
+if [ ! -f ~/.cloudflared/cert.pem ]; then
     echo "❌ Cloudflare credentials not found!"
     echo "Please run: cloudflared tunnel login"
-    echo "Then run: cloudflared tunnel create frohline-oms"
     exit 1
 fi
+
+# Get tunnel ID from existing credentials
+TUNNEL_ID=$(ls ~/.cloudflared/*.json 2>/dev/null | head -1 | xargs -I {} basename {} .json)
+
+if [ -z "$TUNNEL_ID" ]; then
+    echo "❌ No tunnel credentials found!"
+    echo "Please run: cloudflared tunnel login"
+    exit 1
+fi
+
+echo "✅ Found tunnel ID: $TUNNEL_ID"
 
 # Stop any existing cloudflared processes
 pkill -f cloudflared 2>/dev/null
@@ -28,9 +37,9 @@ sleep 2
 mkdir -p ~/.cloudflared
 
 # Create cloudflared configuration
-cat > ~/.cloudflared/config.yml << 'EOF'
-tunnel: 90137fe9-7a2d-4159-a433-d1fdef193f83
-credentials-file: /root/.cloudflared/90137fe9-7a2d-4159-a433-d1fdef193f83.json
+cat > ~/.cloudflared/config.yml << EOF
+tunnel: $TUNNEL_ID
+credentials-file: /home/bashar/.cloudflared/${TUNNEL_ID}.json
 
 ingress:
   # Frontend - froh.bessar.work
@@ -57,7 +66,7 @@ echo "✅ Configuration created"
 
 # Start cloudflared tunnel
 echo "🌐 Starting tunnel..."
-nohup cloudflared tunnel run 90137fe9-7a2d-4159-a433-d1fdef193f83 > /var/log/cloudflared.log 2>&1 &
+nohup cloudflared tunnel run $TUNNEL_ID > ~/cloudflared.log 2>&1 &
 
 # Wait for tunnel to start
 sleep 5
@@ -70,11 +79,11 @@ if pgrep -f "cloudflared tunnel" > /dev/null; then
     echo "   Frontend: https://froh.bessar.work"
     echo "   Backend:  https://api.bessar.work"
     echo ""
-    echo "📝 View logs: tail -f /var/log/cloudflared.log"
+    echo "📝 View logs: tail -f ~/cloudflared.log"
     echo "⏹️  Stop tunnel: pkill -f cloudflared"
     echo "🔄 Restart: Run this script again"
 else
     echo "❌ Failed to start Cloudflare Tunnel"
-    echo "Check logs: cat /var/log/cloudflared.log"
+    echo "Check logs: cat ~/cloudflared.log"
     exit 1
 fi
