@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import axios from 'axios';
 import { useLanguage } from '../context/LanguageContext';
 import { getSubBrandName } from '../data/subBrands';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 const API = axios.create({
   baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000/api',
@@ -17,6 +19,7 @@ function Analytics() {
   const [customers, setCustomers] = useState(null);
   const [trends, setTrends] = useState(null);
   const [trendPeriod, setTrendPeriod] = useState('daily');
+  const dashboardRef = useRef(null);
 
   useEffect(() => {
     loadAnalytics();
@@ -181,6 +184,69 @@ function Analytics() {
 
   const isRTL = language === 'ar';
 
+  // Print/Export to PDF function
+  const handlePrintPDF = async () => {
+    const element = dashboardRef.current;
+    if (!element) return;
+
+    // Scroll to top to capture full content
+    window.scrollTo(0, 0);
+
+    const pdfLabels = {
+      en: 'Analytics Report',
+      tr: 'Analitik Raporu',
+      ar: 'تقرير التحليلات',
+    };
+
+    const fileName = `${pdfLabels[language] || 'Analytics_Report'}_${new Date().toISOString().split('T')[0]}.pdf`;
+
+    try {
+      // Create canvas from dashboard
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        windowWidth: 1920,
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4',
+      });
+
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = pdfWidth - 20; // 10mm margin on each side
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      let heightLeft = imgHeight;
+      let position = 10; // 10mm from top
+      let page = 0;
+
+      // Add first page
+      pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+      heightLeft -= pdfHeight - 20;
+
+      // Add additional pages if needed
+      while (heightLeft > 0) {
+        page++;
+        pdf.addPage();
+        position = heightLeft - imgHeight;
+        pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+        heightLeft -= pdfHeight - 20;
+      }
+
+      pdf.save(fileName);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Error generating PDF. Please try again.');
+    }
+  };
+
+  const isRTL = language === 'ar';
+
   // Prepare data for charts with translations
   const ordersByStatusData = (overview?.ordersByStatus || []).map(s => ({
     name: getStatusTranslation(s.status),
@@ -208,10 +274,17 @@ function Analytics() {
   }));
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'}>
+    <div dir={isRTL ? 'rtl' : 'ltr'} ref={dashboardRef}>
       <div className="d-flex justify-content-between align-items-center mb-4" style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}>
         <h2>{l.title}</h2>
         <div className="btn-group" role="group" dir="ltr">
+          <button
+            className="btn btn-sm btn-success"
+            onClick={handlePrintPDF}
+            title={language === 'ar' ? 'طباعة تقرير PDF' : language === 'tr' ? 'PDF Raporu Yazdır' : 'Print PDF Report'}
+          >
+            📄 {language === 'ar' ? 'طباعة PDF' : language === 'tr' ? 'PDF Yazdır' : 'Print PDF'}
+          </button>
           <button
             className={`btn btn-sm ${trendPeriod === 'daily' ? 'btn-primary' : 'btn-outline-primary'}`}
             onClick={() => setTrendPeriod('daily')}
@@ -476,7 +549,7 @@ function Analytics() {
               <tbody>
                 {(overview?.recentOrders || []).map((order) => (
                   <tr key={order.id}>
-                    <td><small className="font-monospace">{order.id.slice(0, 8)}...</small></td>
+                    <td><small className="font-monospace fw-bold">#{order.id.slice(0, 6).toUpperCase()}</small></td>
                     <td>{order.customer_name}</td>
                     <td>
                       <span className="badge" style={{ backgroundColor: getStatusColor(order.status) }}>

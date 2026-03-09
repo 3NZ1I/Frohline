@@ -226,7 +226,7 @@ function OrdersList() {
                     filteredOrders.map(order => (
                       <tr key={order.id}>
                         <td>
-                          <small className="font-monospace">{order.id.slice(0, 8)}...</small>
+                          <small className="font-monospace fw-bold">#{order.id.slice(0, 6).toUpperCase()}</small>
                         </td>
                         <td>
                           <strong>{order.customer_name}</strong>
