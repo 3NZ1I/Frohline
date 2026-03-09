@@ -1,5 +1,5 @@
-// XLSX export with real Excel format support
-import * as XLSX from 'xlsx';
+// XLSX export with ExcelJS for image support
+import ExcelJS from 'exceljs';
 
 export function exportToExcel(data, filename) {
   // Create CSV content with UTF-8 BOM for proper Turkish character display
@@ -26,7 +26,7 @@ export function exportToExcel(data, filename) {
   document.body.removeChild(link);
 }
 
-export function exportOrderToXLSX(orderData, items, customer, brandName, language, includePrices = true) {
+export async function exportOrderToXLSX(orderData, items, customer, brandName, language, includePrices = true) {
   const date = new Date().toLocaleDateString(language === 'ar' ? 'ar-SA' : language === 'tr' ? 'tr-TR' : 'en-US');
 
   const tr = {
@@ -85,7 +85,7 @@ export function exportOrderToXLSX(orderData, items, customer, brandName, languag
 
   const t = language === 'ar' ? ar : language === 'tr' ? tr : en;
 
-  // Calculate totals - use product_weight if weight is not available
+  // Calculate totals
   const totalQty = items.reduce((sum, item) => sum + item.quantity, 0);
   const totalWeight = items.reduce((sum, item) => {
     const weight = item.weight || item.product_weight || 0;
@@ -94,28 +94,78 @@ export function exportOrderToXLSX(orderData, items, customer, brandName, languag
   const totalAmount = items.reduce((sum, item) => sum + (item.subtotal || 0), 0);
 
   // Create workbook
-  const workbook = XLSX.utils.book_new();
-  
-  // Prepare data for worksheet
-  const wsData = [];
-  
-  // Header
-  wsData.push([t.title]);
-  wsData.push([]);
-  wsData.push([t.customer, customer?.name || '']);
-  wsData.push([t.brand, brandName]);
-  wsData.push([t.date, date]);
-  wsData.push([t.status, orderData.status]);
-  wsData.push([]);
-  
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Order');
+
+  // Set RTL for Arabic
+  if (language === 'ar') {
+    worksheet.properties.rightToLeft = true;
+  }
+
+  // Column widths
+  worksheet.columns = [
+    { key: 'label', width: 15 },
+    { key: 'value', width: 40 },
+  ];
+
+  // Header with logo placeholder
+  worksheet.mergeCells('A1:B1');
+  const headerCell = worksheet.getCell('A1');
+  headerCell.value = t.title;
+  headerCell.font = { size: 20, bold: true };
+  headerCell.alignment = { vertical: 'middle', horizontal: 'center' };
+
+  // Add Frohline logo if available
+  try {
+    const logoResponse = await fetch('/company-logo.png');
+    if (logoResponse.ok) {
+      const logoBuffer = await logoResponse.arrayBuffer();
+      const logoId = workbook.addImage({
+        buffer: Buffer.from(logoBuffer),
+        extension: 'png',
+      });
+      logoId.nm = 'Frohline Logo';
+      worksheet.addImage(logoId, {
+        tl: { col: 0.5, row: 0 },
+        ext: { width: 120, height: 40 },
+      });
+    }
+  } catch (e) {
+    console.log('Logo not available');
+  }
+
+  // Order details
+  const details = [
+    [t.customer, customer?.name || ''],
+    [customer?.company ? t.company || 'Company' : t.brand, customer?.company || brandName],
+    [t.date, date],
+    [t.status, orderData.status],
+  ];
+
+  details.forEach(([label, value], index) => {
+    worksheet.getCell(`A${index + 3}`).value = label;
+    worksheet.getCell(`A${index + 3}`).font = { bold: true };
+    worksheet.getCell(`B${index + 3}`).value = value;
+  });
+
   // Items header
+  const itemsStartRow = details.length + 5;
   const itemHeader = ['#', t.product, t.sku, t.qty, t.weight];
   if (includePrices) {
     itemHeader.push(t.price);
     itemHeader.push(t.subtotal);
   }
-  wsData.push(itemHeader);
-  
+
+  worksheet.spliceRows(itemsStartRow, 0, [itemHeader]);
+  const headerRow = worksheet.getRow(itemsStartRow);
+  headerRow.font = { bold: true };
+  headerRow.fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FFE0E0E0' },
+  };
+  headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+
   // Items data
   items.forEach((item, index) => {
     const weight = item.weight || item.product_weight || 0;
@@ -126,48 +176,75 @@ export function exportOrderToXLSX(orderData, items, customer, brandName, languag
       item.quantity,
       parseFloat((weight * item.quantity).toFixed(2)),
     ];
-    
+
     if (includePrices) {
       row.push(parseFloat(item.unit_price.toFixed(2)));
       row.push(parseFloat(item.subtotal.toFixed(2)));
     }
-    
-    wsData.push(row);
+
+    const rowNum = itemsStartRow + index + 1;
+    worksheet.spliceRows(rowNum, 0, [row]);
+    worksheet.getRow(rowNum).alignment = { vertical: 'middle' };
   });
-  
+
+  // Set column widths for items
+  const itemColWidths = [8, 45, 15, 10, 15];
+  if (includePrices) {
+    itemColWidths.push(15, 15);
+  }
+  itemColWidths.forEach((width, i) => {
+    worksheet.getColumn(i + 1).width = width;
+  });
+
   // Totals
-  wsData.push([]);
-  wsData.push([t.totalQty, totalQty]);
-  wsData.push([t.totalWeight, `${totalWeight.toFixed(2)} kg`]);
-  
+  const totalsRow = itemsStartRow + items.length + 2;
+  worksheet.getCell(`A${totalsRow}`).value = t.totalQty;
+  worksheet.getCell(`A${totalsRow}`).font = { bold: true };
+  worksheet.getCell(`B${totalsRow}`).value = totalQty;
+
+  worksheet.getCell(`A${totalsRow + 1}`).value = t.totalWeight;
+  worksheet.getCell(`A${totalsRow + 1}`).font = { bold: true };
+  worksheet.getCell(`B${totalsRow + 1}`).value = `${totalWeight.toFixed(2)} kg`;
+
   if (includePrices) {
-    wsData.push([t.totalAmount, `$${totalAmount.toFixed(2)}`]);
+    worksheet.getCell(`A${totalsRow + 2}`).value = t.totalAmount;
+    worksheet.getCell(`A${totalsRow + 2}`).font = { bold: true };
+    worksheet.getCell(`B${totalsRow + 2}`).value = `$${totalAmount.toFixed(2)}`;
   }
-  
-  wsData.push([]);
-  wsData.push([t.notes, orderData.notes || '']);
-  
-  // Create worksheet
-  const worksheet = XLSX.utils.aoa_to_sheet(wsData);
-  
-  // Set column widths
-  worksheet['!cols'] = [
-    { wch: 5 },  // #
-    { wch: 40 }, // Product name
-    { wch: 15 }, // SKU
-    { wch: 10 }, // Qty
-    { wch: 15 }, // Weight
-  ];
-  
-  if (includePrices) {
-    worksheet['!cols'].push({ wch: 15 }); // Price
-    worksheet['!cols'].push({ wch: 15 }); // Subtotal
-  }
-  
-  // Add worksheet to workbook
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Order');
-  
+
+  // Notes
+  const notesRow = totalsRow + 5;
+  worksheet.getCell(`A${notesRow}`).value = t.notes;
+  worksheet.getCell(`A${notesRow}`).font = { bold: true };
+  worksheet.getCell(`B${notesRow}`).value = orderData.notes || '';
+  worksheet.getCell(`B${notesRow}`).alignment = { wrapText: true };
+
+  // Border styling
+  const lastRow = notesRow + 2;
+  worksheet.eachRow((row, rowNumber) => {
+    if (rowNumber < lastRow) {
+      row.eachCell((cell) => {
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' },
+        };
+      });
+    }
+  });
+
   // Export file
   const filename = `Order_${customer?.name?.replace(/\s+/g, '_') || 'New'}_${includePrices ? 'with_prices' : 'no_prices'}_${new Date().getTime()}.xlsx`;
-  XLSX.writeFile(workbook, filename);
+  
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
 }
