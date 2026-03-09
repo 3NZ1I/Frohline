@@ -7,6 +7,69 @@ const API = axios.create({
   baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000/api',
 });
 
+// Production types with their speeds
+const PRODUCTION_TYPES = [
+  { name: '60LIK 3ODACIKLI L KASA PROFİLİ', speed: 2.9 },
+  { name: '60LIK 3ODACIKLI ORTA KAYIT PROFİLİ', speed: 2.7 },
+  { name: '60LIK 3ODACIKLI PENCERE KANAT PROFİLİ', speed: 2.8 },
+  { name: '60LIK 3ODACIKLI KAPI KANAT PROFİLİ', speed: 2.5 },
+  { name: '60LIK 3ODACIKLI PERVAZLI KASA PROFİLİ', speed: 2.7 },
+  { name: '60LIK 4ODACIKLI PERVAZLI KASA PROFİLİ', speed: 2.7 },
+  { name: 'TEK CAM ÇITASI', speed: 2.9 },
+  { name: 'ÇİFT CAM ÇITASI', speed: 2.9 },
+  { name: '2,4 MM SÜRME ÇİFTLİ KASA PROFİLİ', speed: 2.8 },
+  { name: '2 MM SÜRME ÇİFTLİ KASA PROFİLİ', speed: 2.7 },
+  { name: '2 MM SÜRME PERVAZLI KASA PROFİLİ', speed: 2.6 },
+  { name: '2,4 MM SÜRME PERVAZLI KASA PROFİLİ PROFİLİ', speed: 2.6 },
+  { name: '1,5 MM SÜRME U KASA PROFİLİ PROFİLİ', speed: 2.5 },
+  { name: '2 MM SÜRME SİNEKLİKLİ PERVAZLI KASA PROFİLİ', speed: 2.3 },
+  { name: '2,4 MM SÜRME PENCERE KANAT PROFİLİ', speed: 2.5 },
+  { name: '2 MM SÜRME PENCERE KANAT PROFİLİ', speed: 2.4 },
+  { name: '2 MM SÜRME ORTA KAYIT PROFİLİ', speed: 2.8 },
+  { name: '2 MM SÜRME TEKLİ KASA KAPAMA PROFİLİ', speed: 2.6 },
+  { name: '2 MM SÜRME SİNEKLİKLİ PENCERE KANAT PROFİLİ', speed: 2.5 },
+  { name: '2 MM SÜRME KİLİTLEME PROFİLİ', speed: 3.5 },
+  { name: 'SÜRME TEK CAM ÇITASI+70LİK ÇİFT CAM', speed: 2.8 },
+  { name: 'SÜRME ÇİFT CAM ÇITASI', speed: 2.9 },
+  { name: '2 MM DÜZ 4 ODA KASA PROFİLİ', speed: 2.6 },
+  { name: '2 MM DÜZ 4 ODA ORTA KAYIT PROFİLİ', speed: 2.7 },
+  { name: '2 MM DÜZ 4 ODA KAPI KANAT PROFİLİ', speed: 2.7 },
+  { name: '2 MM DÜZ 4 ODA PENCERE KANAT PROFİLİ', speed: 2.7 },
+  { name: '2 MM DÜZ 4 ODA PERVAZLI KASA PROFİLİ', speed: 2.7 },
+  { name: '1,7 MM DÜZ 4 ODA KASA PROFİLİ', speed: 2.7 },
+  { name: '1,7 MM DÜZ 4 ODA ORTA KAYIT PROFİLİ', speed: 2.65 },
+  { name: '1,7 MM DÜZ 4 ODA PENCERE KANAT PROFİLİ', speed: 2.65 },
+  { name: '1,7 MM DÜZ 4 ODA KAPI KANAT PROFİLİ', speed: 2.3 },
+  { name: '4 ODA DÜZ 1,7MM PERVAZLI KASA PROFİLİ', speed: 2.7 },
+  { name: '24 MM OVAL ÇITA BEYAZ', speed: 2.95 },
+  { name: 'DÜZ TEK CAM', speed: 2.95 },
+  { name: 'DÜZ ÇİFT CAM', speed: 2.95 },
+  { name: '60LIK 4ODACIKLI PLATİNİUM L KASA PROFİLİ', speed: 2.8 },
+  { name: '60LIK 4ODACIKLI PLATİNİUM ORTA KAYIT PROFİLİ', speed: 2.65 },
+  { name: '60LIK 4ODACIKLI PLATİNİUM PENCERE KANAT PROFİLİ', speed: 2.65 },
+  { name: '60LIK 4ODACIKLI PLATİNİUM KAPI KANAT PROFİLİ', speed: 2.5 },
+  { name: '60LIK 4ODACIKLI PLATİNİUM PERVAZLI KASA PROFİLİ', speed: 2.6 },
+  { name: '70LİK 4ODACIKLI L KASA PROFİLİ', speed: 2.5 },
+  { name: '70LİK 4ODACIKLI ORTA KAYIT PROFİLİ', speed: 2.6 },
+  { name: '70LİK 4ODACIKLI PERVAZLI KASA PROFİLİ', speed: 2.6 },
+  { name: '70LİK 5ODACIKLI L KASA PROFİLİ', speed: 2.6 },
+  { name: '70LİK 5ODACIKLI ORTA KAYIT PROFİLİ', speed: 2.6 },
+  { name: '70LİK 5ODACIKLI PERVAZLI KASA PROFİLİ', speed: 2.5 },
+  { name: 'HAREKETLİ ORTA KAYIT', speed: 2.9 },
+  { name: 'U KASA PROFİLİ 40LIK', speed: 2.7 },
+  { name: 'KUTU PROFİLİ', speed: 2.6 },
+  { name: '10\'LUK LAMBRİ', speed: 2.5 },
+  { name: 'KÖŞE DÖNÜŞ (BORU) PROFİLİ', speed: 2.2 },
+  { name: 'KÖŞE DÖNÜŞ ADAPTÖRÜ BEYAZ', speed: 2.5 },
+  { name: '60*90 PERVAZ PROFİLİ', speed: 2.2 },
+  { name: '70LİK TEK CAM ÇITASI', speed: 2.9 },
+  { name: '2,9 MM 70LİK KASA PROFİLİ', speed: 2.5 },
+  { name: '2,9 MM 70LİK ORTA KAYIT PROFİLİ', speed: 2.5 },
+  { name: '2,9 MM 70LİK PENCERE KANAT PROFİLİ', speed: 2.5 },
+  { name: '2,9 MM 70LİK KAPI KANAT PROFİLİ', speed: 2.2 },
+  { name: '2,9 MM 70LİK PERVAZLI KASA PROFİLİ', speed: 2.3 },
+];
+
 function ProductionDetails() {
   const { language } = useLanguage();
   const [view, setView] = useState('form'); // 'form' or 'reports'
@@ -62,6 +125,15 @@ function ProductionDetails() {
   const handleLineChange = (lineIndex, field, value) => {
     const newLines = [...lines];
     newLines[lineIndex][field] = value;
+    
+    // Auto-fill speed when production type is selected
+    if (field === 'type') {
+      const selectedType = PRODUCTION_TYPES.find(t => t.name === value);
+      if (selectedType) {
+        newLines[lineIndex].speed = selectedType.speed.toString();
+      }
+    }
+    
     setLines(newLines);
   };
 
@@ -494,13 +566,18 @@ function ProductionDetails() {
                         <tr key={index}>
                           <td className="text-center fw-bold">Line {index + 1}</td>
                           <td>
-                            <input
-                              type="text"
+                            <select
                               className="form-control form-control-sm"
                               value={line.type}
                               onChange={(e) => handleLineChange(index, 'type', e.target.value)}
-                              placeholder="Type"
-                            />
+                            >
+                              <option value="">-- Select Type --</option>
+                              {PRODUCTION_TYPES.map((type, i) => (
+                                <option key={i} value={type.name}>
+                                  {type.name} ({type.speed} m/min)
+                                </option>
+                              ))}
+                            </select>
                           </td>
                           <td>
                             <input
@@ -510,6 +587,7 @@ function ProductionDetails() {
                               value={line.speed}
                               onChange={(e) => handleLineChange(index, 'speed', e.target.value)}
                               placeholder="0.0"
+                              readOnly
                             />
                           </td>
                           <td>
