@@ -39,10 +39,10 @@ function Sidebar() {
       <nav className="nav flex-column p-3 flex-grow-1">
         <Link
           className={`nav-link rounded mb-2 d-flex align-items-center ${
-            location.pathname === '/' ? 'active bg-danger' : 'text-white'
+            location.pathname === '/' ? 'active' : 'text-white'
           }`}
           to="/"
-          style={{ padding: '12px 15px', transition: 'all 0.2s' }}
+          style={{ padding: '12px 15px', transition: 'all 0.2s', backgroundColor: location.pathname === '/' ? '#dc3545' : 'transparent', color: 'white' }}
         >
           <span className="me-2">📋</span>
           <span>{t('orders')}</span>
@@ -50,10 +50,10 @@ function Sidebar() {
 
         <Link
           className={`nav-link rounded mb-2 d-flex align-items-center ${
-            location.pathname === '/orders/new' ? 'active bg-danger' : 'text-white'
+            location.pathname === '/orders/new' ? 'active' : 'text-white'
           }`}
           to="/orders/new"
-          style={{ padding: '12px 15px', transition: 'all 0.2s' }}
+          style={{ padding: '12px 15px', transition: 'all 0.2s', backgroundColor: location.pathname === '/orders/new' ? '#dc3545' : 'transparent', color: 'white' }}
         >
           <span className="me-2">➕</span>
           <span>{t('newOrder')}</span>
@@ -61,10 +61,10 @@ function Sidebar() {
 
         <Link
           className={`nav-link rounded mb-2 d-flex align-items-center ${
-            location.pathname === '/customers' ? 'active bg-danger' : 'text-white'
+            location.pathname === '/customers' ? 'active' : 'text-white'
           }`}
           to="/customers"
-          style={{ padding: '12px 15px', transition: 'all 0.2s' }}
+          style={{ padding: '12px 15px', transition: 'all 0.2s', backgroundColor: location.pathname === '/customers' ? '#dc3545' : 'transparent', color: 'white' }}
         >
           <span className="me-2">👥</span>
           <span>{t('customers')}</span>
@@ -72,10 +72,10 @@ function Sidebar() {
 
         <Link
           className={`nav-link rounded mb-2 d-flex align-items-center ${
-            location.pathname === '/products' ? 'active bg-danger' : 'text-white'
+            location.pathname === '/products' ? 'active' : 'text-white'
           }`}
           to="/products"
-          style={{ padding: '12px 15px', transition: 'all 0.2s' }}
+          style={{ padding: '12px 15px', transition: 'all 0.2s', backgroundColor: location.pathname === '/products' ? '#dc3545' : 'transparent', color: 'white' }}
         >
           <span className="me-2">📦</span>
           <span>{t('products')}</span>
@@ -83,10 +83,10 @@ function Sidebar() {
 
         <Link
           className={`nav-link rounded mb-2 d-flex align-items-center ${
-            location.pathname === '/analytics' ? 'active bg-danger' : 'text-white'
+            location.pathname === '/analytics' ? 'active' : 'text-white'
           }`}
           to="/analytics"
-          style={{ padding: '12px 15px', transition: 'all 0.2s' }}
+          style={{ padding: '12px 15px', transition: 'all 0.2s', backgroundColor: location.pathname === '/analytics' ? '#dc3545' : 'transparent', color: 'white' }}
         >
           <span className="me-2">📊</span>
           <span>Analytics</span>
@@ -94,10 +94,10 @@ function Sidebar() {
 
         <Link
           className={`nav-link rounded mb-2 d-flex align-items-center ${
-            location.pathname === '/production' ? 'active bg-danger' : 'text-white'
+            location.pathname === '/production' ? 'active' : 'text-white'
           }`}
           to="/production"
-          style={{ padding: '12px 15px', transition: 'all 0.2s' }}
+          style={{ padding: '12px 15px', transition: 'all 0.2s', backgroundColor: location.pathname === '/production' ? '#dc3545' : 'transparent', color: 'white' }}
         >
           <span className="me-2">🏭</span>
           <span>Production</span>
